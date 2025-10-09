@@ -1,0 +1,11 @@
+# Ignore build artifacts
+build/
+install/
+log/
+
+# Ignore archived code for demonstrations
+**/Archived_for_demo/
+
+# Ignore Python virtual environments
+.venv/
+venv/

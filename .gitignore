@@ -1,0 +1,28 @@
+# Build artifacts
+build/
+devel/
+install/
+logs/
+log/
+
+# Catkin workspace files
+.catkin_workspace
+.catkin_tools/
+
+# Log files
+*.log
+
+# Editor backup files
+*~
+*.swp
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE settings
+**/.vscode/
+
+*.env
+
+**/.git/

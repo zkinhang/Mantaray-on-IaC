@@ -1,0 +1,119 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import cv2
+import time
+
+
+class TaskQual():
+    def __init__(self):
+        self.image = None
+        # Yellow
+        # self.lower = np.array([12, 50, 52])
+        # self.upper = np.array([35, 208, 212])
+        # Red
+        # self.lower = np.array([0, 134, 134])
+        # self.upper = np.array([10, 255, 255])
+        # Green
+        self.lower = np.array([43, 102, 16])
+        self.upper = np.array([82, 255, 101])
+
+    def adjustment(self,x_diff,y_diff):
+        """Return the Power of the LR and depth movement"""
+        LR = 0
+        depth = -5
+        LRPower = 30
+        DPower = 30
+        x_ratio = (x_diff / 200)
+        print(x_diff,y_diff)
+        if y_diff > 10:
+            """y_diff > 0 mean the object is below the center of the image"""
+            print("Go Down")
+            depth = -DPower
+        elif y_diff < -10:
+            print("Go Up")
+        else:
+            print("Depth Stay")
+        if x_diff > 10:
+            """x_diff > 0 mean the object is at the Right side of the image"""
+            print("Go Right")
+            LR = LRPower * x_ratio
+        elif x_diff < -10:
+            print("Go Left")
+            LR = LRPower * x_ratio
+        else:
+            print("LR Stay")
+        return LR,depth
+
+    def step(self, image, startTime = None):
+        focalLength = 30 
+        completed = False
+        LR, UD, FB, turn = 0, 0, 0, 0
+        elapsed_time = time.time() - startTime
+        if elapsed_time <= 2:
+            FB = 20
+            return completed, LR, UD, FB, turn, startTime
+        else:
+            FB = 0
+            self.image, _, x_diff,y_diff = self.pointGate(image,self.lower,self.upper)
+            LR,UD,FB,turn = 0,0,5,0
+            if x_diff is not None and y_diff is not None:
+                LR,UD = self.adjustment(x_diff,y_diff)
+            return completed, LR, FB, UD, turn, startTime
+        
+    def pointGate(self, img, lower, upper):
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, lower, upper)
+        _, edges = cv2.threshold(mask, 150, 255, cv2.THRESH_BINARY)
+        contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        centers = []
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)[:2]
+        x_diff = 0
+        y_diff = 0
+        if len(contours) > 0:
+            for contour in contours:
+                try:
+                    center = cv2.moments(contour)["m10"] / cv2.moments(contour)["m00"]
+                    center = (int(center), int(cv2.moments(contour)["m01"] / cv2.moments(contour)["m00"]))
+                    centers.append(center)
+                    line_thickness = 2
+                    color = (0, 0, 255)
+                    cv2.circle(img, center, 10, color, line_thickness)
+                except ZeroDivisionError:
+                    frame = None
+                    return frame, mask, x_diff, y_diff
+            center1 = centers[0]
+            center2 = centers[1]
+            center_difference = (((center1[0] + center2[0]) // 2), ((center1[1] + center2[1]) // 2))
+            color = (0, 0, 255)
+            colorRed = (0, 255, 0)
+            cv2.circle(img, center_difference, 10, color, line_thickness)
+            frame = cv2.bitwise_and(img, img, mask=mask)
+            img_height, img_width = frame.shape[:2]
+            half_width, half_height = img_width // 2, img_height // 2
+            cv2.line(frame, (center_difference[0] - half_width, center_difference[1]), (center_difference[0] + half_width, center_difference[1]), color, line_thickness)
+            cv2.line(frame, (center_difference[0], center_difference[1] - half_height), (center_difference[0], center_difference[1] + half_height), color, line_thickness)
+            cv2.line(frame, (center_difference[0], center_difference[1]), (half_width, half_height), colorRed, line_thickness)
+            x_diff = center_difference[0] - half_width
+            y_diff = center_difference[1] - half_height
+            return frame, mask, x_diff, y_diff
+        return frame, mask, x_diff, y_diff
+
+if __name__ == "__main__":
+    task = TaskQual()
+    Vdopath = "PutYourImageInputHere"
+    cap = cv2.VideoCapture(0)
+    startTime = time.time()
+    while True:
+        ret, frame = cap.read()
+        if ret:
+            try:
+                cv2.imshow("image2",frame)
+            except:
+                continue
+            completed, LR, UD, FB, turn, startTime = task.step(frame, startTime)
+            print(LR, UD, startTime)
+            try:
+                cv2.imshow("image",task.image)
+            except:
+                continue
+            cv2.waitKey(1)
