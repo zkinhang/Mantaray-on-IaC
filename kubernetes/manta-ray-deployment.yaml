@@ -99,13 +99,6 @@ spec:
       labels:
         app: http-image-getter-a
     spec:
-      # Use host networking for ROS 2 discovery
-      hostNetwork: true
-      hostIPC: true
-      hostAliases:
-      - ip: "192.168.10.7"
-        hostnames:
-        - "rov.local"
       securityContext:
         runAsUser: 1000  # <-- Replace with your UID
         runAsGroup: 1000 # <-- Replace with your GID
@@ -155,13 +148,6 @@ spec:
       labels:
         app: http-image-getter-b
     spec:
-      # Use host networking for ROS 2 discovery
-      hostNetwork: true
-      hostIPC: true
-      hostAliases:
-      - ip: "192.168.10.22"
-        hostnames:
-        - "rov-cam.local"
       securityContext:
         runAsUser: 1000  # <-- Replace with your UID
         runAsGroup: 1000 # <-- Replace with your GID
@@ -339,8 +325,6 @@ spec:
       # Ensure this pod runs ONLY on your main ROV Pi
       nodeSelector:
         ros2-hardware: rov-main
-      # Use host networking for easy access to the HTTP stream
-      hostNetwork: true
       containers:
       - name: http-streamer-a-container
         image: zkinhang/manta-ray-ros:latest
@@ -375,8 +359,6 @@ spec:
       # Ensure this pod runs ONLY on your main ROV Pi
       nodeSelector:
         ros2-hardware: rov-camera
-      # Use host networking for easy access to the HTTP stream
-      hostNetwork: true
       containers:
       - name: http-streamer-b-container
         image: zkinhang/manta-ray-ros:latest
