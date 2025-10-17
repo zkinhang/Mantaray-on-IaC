@@ -95,7 +95,7 @@ int main() {
     }
     
     // Configure CURL for better performance
-    curl_easy_setopt(curl, CURLOPT_URL, "http://rov-cam.local:5000/video_feed");
+    curl_easy_setopt(curl, CURLOPT_URL, "http://rov-cam-streamer-service:5000/video_feed");
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 2L);            // 2-second timeout
     curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);      // Enable TCP keepalive
