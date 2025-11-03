@@ -33,6 +33,24 @@
         template: "k8s/manta-ray-deployment.yaml.j2"
         namespace: "{{ k8s_namespace | default('default') }}"
 
+    - name: Force restart all application deployments (for testing)
+      kubernetes.core.k8s:
+        state: patched
+        kind: Deployment
+        name: "{{ item }}"
+        namespace: default
+        definition:
+          spec:
+            template:
+              metadata:
+                annotations:
+                  ansible.kubernetes.io/restarted_at: "{{ lookup('pipe', 'date -u +%FT%TZ') }}"
+      # Loop over the list defined in deployment-vars.yaml
+      loop: "{{ all_app_deployments }}"
+      # This task is SKIPPED by default
+      # It only runs if you add '-e "force_restart=true"' to your command
+      when: force_restart | default(false) | bool
+
   handlers:
       - name: Restart nodes that use parameters
         kubernetes.core.k8s:

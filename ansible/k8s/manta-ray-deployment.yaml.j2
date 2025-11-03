@@ -85,6 +85,9 @@ spec:
       - name: parameter-volume
         configMap:
           name: robot-parameters
+      - name: thrusterboard-api-source
+        hostPath:
+          path: "{{ path_thrusterboard_api }}"
 
       containers:
       - name: receiver-container
@@ -98,6 +101,8 @@ spec:
         - name: parameter-volume
           mountPath: /config
           readOnly: true
+        - name: thrusterboard-api-source
+          mountPath: "{{ path_thrusterboard_mounting }}"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -397,6 +402,9 @@ spec:
       - name: parameter-volume
         configMap:
           name: robot-parameters
+      - name: thrusterboard-api-source
+        hostPath:
+          path: "{{ path_thrusterboard_api }}"
       containers:
       - name: thrusterboard-container
         image: "{{ main_ros_image }}" 
@@ -414,6 +422,8 @@ spec:
         - name: parameter-volume
           mountPath: /config
           readOnly: true
+        - name: thrusterboard-api-source
+          mountPath: "{{ path_thrusterboard_mounting }}"
 ---
 apiVersion: apps/v1
 kind: Deployment
