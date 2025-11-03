@@ -10,3 +10,7 @@ path_b_camera: "/dev/video1"
 # ---Paths for USB devices ---
 path_imu: "/dev/imu"
 path_microros_serial: "/dev/ttyUSB0"
+
+# --- Paths for source code mounting in testing ---
+path_thrusterboard_api: "/home/edwin/Desktop/ros_docker/src/ros2/thrusterboard_pkg/thrusterboard_pkg/ThrusterBoard_API.py"
+path_thrusterboard_mounting: "/ros2_ws/tools/ThrusterBoard_API.py"

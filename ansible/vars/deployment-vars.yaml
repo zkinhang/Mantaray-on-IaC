@@ -1,2 +1,19 @@
 main_ros_image: "zkinhang/manta-ray-ros:latest"
 microros_image: "zkinhang/microros-with-esptool:0.1"
+
+all_app_deployments:
+  - controller-deployment
+  - ui-node-deployment
+  - receiver-deployment
+  - http-image-getter-a-deployment
+  - http-image-getter-b-deployment
+  - capture-image-deployment
+  - save-image-deployment
+  - morse-code-deployment
+  - foxglove-bridge-deployment
+  - msg-converter-deployment
+  - http-streamer-a-deployment
+  - http-streamer-b-deployment
+  - thrusterboard-deployment
+  - pid-system-deployment
+  - microros-agent-deployment
