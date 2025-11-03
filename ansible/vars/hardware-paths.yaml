@@ -1,0 +1,12 @@
+# --- Paths for land-pc (mantaray) ---
+path_x11_socket: "/tmp/.X11-unix"
+path_dev_dri: "/dev/dri"
+path_xauthority: "/home/edwin/.Xauthority" 
+
+# --- Paths for video ---
+path_a_camera: "/dev/video1" 
+path_b_camera: "/dev/video1"
+
+# ---Paths for USB devices ---
+path_imu: "/dev/imu"
+path_microros_serial: "/dev/ttyUSB0"

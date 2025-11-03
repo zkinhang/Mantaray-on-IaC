@@ -1,0 +1,54 @@
+- name: Deploy or Update Manta Ray ROS System
+  hosts: local_control
+  gather_facts: false
+
+  vars_files:
+    - "vars/deployment-vars.yaml"
+    - "vars/hardware-paths.yaml"
+
+  tasks:
+    - name: Load robot parameters from JSON file
+      include_vars:
+        file: "config/robot_params.json"
+        name: robot_config # Loads the JSON data into a variable called 'robot_config'
+
+    - name: Create or update the robot parameters ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        template: "k8s/robot-configmap.yaml.j2"
+        namespace: "{{ k8s_namespace | default('default') }}"
+      vars:
+        robot_vars: "{{ robot_config }}" # Pass the JSON data to the template
+      notify: Restart nodes that use parameters
+
+    - name: Apply application-level Services
+      kubernetes.core.k8s:
+        state: present
+        src: "k8s/dns-service.yaml"
+        namespace: "{{ k8s_namespace | default('default') }}"
+
+    - name: Apply Kubernetes application deployments
+      kubernetes.core.k8s:
+        state: present
+        template: "k8s/manta-ray-deployment.yaml.j2"
+        namespace: "{{ k8s_namespace | default('default') }}"
+
+  handlers:
+      - name: Restart nodes that use parameters
+        kubernetes.core.k8s:
+          state: patched  # Tell the module we are just patching
+          kind: Deployment
+          name: "{{ item }}"
+          namespace: "{{ k8s_namespace | default('default') }}"
+          definition:
+            spec:
+              template:
+                metadata:
+                  # This will create the annotations map if it's missing
+                  # or just add/update the 'restarted-at' key if it exists.
+                  annotations:
+                    restarted-at: "{{ lookup('pipe', 'date -u +%FT%TZ') }}"
+        loop:
+          - pid-system-deployment
+          - thrusterboard-deployment
+          - receiver-deployment

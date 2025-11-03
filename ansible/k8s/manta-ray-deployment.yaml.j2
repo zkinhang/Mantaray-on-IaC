@@ -1,4 +1,4 @@
-# manta-ray-deployment.yaml
+# '{{ main_ros_image }}' and '{{ microros_image }}' are variables
 
 apiVersion: apps/v1
 kind: Deployment
@@ -22,7 +22,7 @@ spec:
         ros2-hardware: land-pc
       containers:
       - name: controller-container
-        image: zkinhang/manta-ray-ros:latest
+        image: "{{ main_ros_image }}"
         args: ["ros2", "run", "controller_pkg", "joystick_reader"]
         # Grant privileges to access host devices
         securityContext:
@@ -55,7 +55,7 @@ spec:
         ros2-hardware: land-pc
       containers:
       - name: ui-node-container
-        image: zkinhang/manta-ray-ros:latest
+        image: "{{ main_ros_image }}"
         args: ["ros2", "run", "ui_pkg", "ui_node"]
         # Required for interactive terminal UI
         tty: true
@@ -80,10 +80,24 @@ spec:
       hostIPC: true
       nodeSelector:
         ros2-hardware: land-pc
+
+      volumes:
+      - name: parameter-volume
+        configMap:
+          name: robot-parameters
+
       containers:
       - name: receiver-container
-        image: zkinhang/manta-ray-ros:latest
-        args: ["ros2", "run", "receiver_pkg", "decomposer"]
+        image: "{{ main_ros_image }}"
+
+        command: ["/bin/bash", "-c"]
+        args:
+          - "source /ros2_ws/install/setup.bash && ros2 run receiver_pkg decomposer --ros-args --params-file /config/params.yaml"
+
+        volumeMounts:
+        - name: parameter-volume
+          mountPath: /config
+          readOnly: true
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -106,7 +120,7 @@ spec:
         ros2-hardware: land-pc
       containers:
       - name: http-image-getter-a-container
-        image: zkinhang/manta-ray-ros:latest
+        image: "{{ main_ros_image }}"
         args: ["httpGetImage"]
         # Grant privileges to access host devices
         env:
@@ -118,21 +132,21 @@ spec:
           privileged: true
         volumeMounts:
         - name: x11-forwarding
-          mountPath: /tmp/.X11-unix
+          mountPath: "{{ path_x11_socket }}"
         - name: dev-dri
-          mountPath: /dev/dri
+          mountPath: "{{ path_dev_dri }}"
         - name: xauthority
-          mountPath: /root/.Xauthority
+          mountPath: "{{ path_xauthority }}"
       volumes:
       - name: x11-forwarding
         hostPath:
-          path: /tmp/.X11-unix
+          path: "{{ path_x11_socket }}"
       - name: dev-dri
         hostPath:
-          path: /dev/dri
+          path: "{{ path_dev_dri }}"
       - name: xauthority
         hostPath:
-          path: /home/edwin/.Xauthority
+          path: "{{ path_xauthority }}"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -155,7 +169,7 @@ spec:
         ros2-hardware: land-pc
       containers:
       - name: http-image-getter-b-container
-        image: zkinhang/manta-ray-ros:latest
+        image: "{{ main_ros_image }}"
         args: ["httpGetImage_cam"]
         # Grant privileges to access host devices
         env:
@@ -167,21 +181,21 @@ spec:
           privileged: true
         volumeMounts:
         - name: x11-forwarding
-          mountPath: /tmp/.X11-unix
+          mountPath: "{{ path_x11_socket }}"
         - name: dev-dri
-          mountPath: /dev/dri
+          mountPath: "{{ path_dev_dri }}"
         - name: xauthority
-          mountPath: /root/.Xauthority
+          mountPath: "{{ path_xauthority }}"
       volumes:
       - name: x11-forwarding
         hostPath:
-          path: /tmp/.X11-unix
+          path: "{{ path_x11_socket }}"
       - name: dev-dri
         hostPath:
-          path: /dev/dri
+          path: "{{ path_dev_dri }}"
       - name: xauthority
         hostPath:
-          path: /home/edwin/.Xauthority
+          path: "{{ path_xauthority }}"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -197,15 +211,13 @@ spec:
       labels:
         app: capture-image
     spec:
-      # Use host networking for ROS 2 discovery
       hostNetwork: true
       hostIPC: true
-      # Ensure this pod runs ONLY on the PC
       nodeSelector:
         ros2-hardware: land-pc
       containers:
       - name: capture-image-container
-        image: zkinhang/manta-ray-ros:latest
+        image: "{{ main_ros_image }}"
         args: ["ros2", "run", "streaming_pkg", "capture_image"]
 ---
 apiVersion: apps/v1
@@ -222,15 +234,13 @@ spec:
       labels:
         app: save-image
     spec:
-      # Use host networking for ROS 2 discovery
       hostNetwork: true
       hostIPC: true
-      # Ensure this pod runs ONLY on the PC
       nodeSelector:
         ros2-hardware: land-pc
       containers:
       - name: save-image-container
-        image: zkinhang/manta-ray-ros:latest
+        image: "{{ main_ros_image }}"
         args: ["ros2", "run", "streaming_pkg", "save_image"]
 ---
 apiVersion: apps/v1
@@ -247,15 +257,13 @@ spec:
       labels:
         app: morse-code
     spec:
-      # Use host networking for ROS 2 discovery
       hostNetwork: true
       hostIPC: true
-      # Ensure this pod runs ONLY on the PC
       nodeSelector:
         ros2-hardware: land-pc
       containers:
       - name: morse-code-container
-        image: zkinhang/manta-ray-ros:latest
+        image: "{{ main_ros_image }}"
         args: ["ros2", "run", "morsecode_pkg", "mos_code"]
 ---
 apiVersion: apps/v1
@@ -272,15 +280,13 @@ spec:
       labels:
         app: foxglove-bridge
     spec:
-      # Use host networking for ROS 2 discovery
       hostNetwork: true
       hostIPC: true
-      # Ensure this pod runs ONLY on the PC
       nodeSelector:
         ros2-hardware: land-pc
       containers:
       - name: foxglove-bridge-container
-        image: zkinhang/manta-ray-ros:latest
+        image: "{{ main_ros_image }}"
         args: ["ros2", "launch", "foxglove_bridge", "foxglove_bridge_launch.xml", "port:=8765"]
 ---
 apiVersion: apps/v1
@@ -297,15 +303,13 @@ spec:
       labels:
         app: msg-converter
     spec:
-      # Use host networking for ROS 2 discovery
       hostNetwork: true
       hostIPC: true
-      # Ensure this pod runs ONLY on the PC
       nodeSelector:        
         ros2-hardware: land-pc
       containers:
       - name: msg-converter-container
-        image: zkinhang/manta-ray-ros:latest
+        image: "{{ main_ros_image }}"
         args: ["ros2", "run", "control_system_pkg", "msg_converter"]
 ---
 apiVersion: apps/v1
@@ -322,25 +326,21 @@ spec:
       labels:
         app: http-streamer-a
     spec:
-      # Ensure this pod runs ONLY on your main ROV Pi
       nodeSelector:
         ros2-hardware: rov-main
       containers:
       - name: http-streamer-a-container
-        image: zkinhang/manta-ray-ros:latest
-        # This assumes 'httpStreamer' was built and copied to /usr/local/bin
+        image: "{{ main_ros_image }}"
         args: ["httpStreamer"]
-        # command: ["/bin/bash", "-c", "--"]
-        # args: ["while true; do sleep 30; done;"]
         securityContext:
           privileged: true
         volumeMounts:
         - name: camera-device
-          mountPath: /dev/video1
+          mountPath: "{{ path_a_camera }}"
       volumes:
       - name: camera-device
         hostPath:
-          path: /dev/video1
+          path: "{{ path_a_camera }}"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -356,25 +356,21 @@ spec:
       labels:
         app: http-streamer-b
     spec:
-      # Ensure this pod runs ONLY on your main ROV Pi
       nodeSelector:
         ros2-hardware: rov-camera
       containers:
       - name: http-streamer-b-container
-        image: zkinhang/manta-ray-ros:latest
-        # This assumes 'httpStreamer' was built and copied to /usr/local/bin
+        image: "{{ main_ros_image }}"
         args: ["httpStreamer"]
-        # command: ["/bin/bash", "-c", "--"]
-        # args: ["while true; do sleep 30; done;"]
         securityContext:
           privileged: true
         volumeMounts:
         - name: camera-device
-          mountPath: /dev/video1
+          mountPath: "{{ path_b_camera }}"
       volumes:
       - name: camera-device
         hostPath:
-          path: /dev/video1
+          path: "{{ path_b_camera }}"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -390,35 +386,34 @@ spec:
       labels:
         app: thrusterboard
     spec:
-      # Ensure this pod runs ONLY on the robot hardware
       nodeSelector:
         ros2-hardware: rov-main
-      # Use host networking for ROS 2 DDS discovery
       hostNetwork: true
       hostIPC: true
-      # Define the shared serial port device from the host
       volumes:
       - name: serial-port
         hostPath:
           path: /dev
-      # Define a single container to run the launch file
+      - name: parameter-volume
+        configMap:
+          name: robot-parameters
       containers:
       - name: thrusterboard-container
-        image: zkinhang/manta-ray-ros:latest
-        command: ["/bin/bash", "-c", "--"]
-        # args: ["while true; do sleep 30; done;"]
-        # args: ["ros2 launch /ros2_ws/src/launch_file/launch_thruster.py"]
+        image: "{{ main_ros_image }}" 
+        command: ["/bin/bash", "-c"]
+
         args:
           - >
             source install/setup.bash && 
-            ros2 launch /ros2_ws/src/launch_file/launch_thruster.py
-        # Grant privileges to access host hardware
+            ros2 launch /ros2_ws/src/launch_file/launch_thruster.py params_file:=/config/params.yaml
         securityContext:
           privileged: true
-        # Mount the shared serial port into this container
         volumeMounts:
         - name: serial-port
           mountPath: /dev
+        - name: parameter-volume
+          mountPath: /config
+          readOnly: true
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -437,24 +432,28 @@ spec:
       volumes:
       - name: dev-input
         hostPath:
-          path: /dev/imu
-      # Assuming this pod runs on your main PC
+          path: "{{ path_imu }}"
+      - name: parameter-volume
+        configMap:
+          name: robot-parameters
       nodeSelector:
         ros2-hardware: rov-main
-      # Use host networking for ROS 2 DDS discovery
       hostNetwork: true
       hostIPC: true
       containers:
       - name: pid-system-container
-        # Replace with your actual ROS 2 Docker image
-        image: zkinhang/manta-ray-ros:latest
+        image: "{{ main_ros_image }}"
         volumeMounts:
         - name: dev-input
-          mountPath: /dev/imu
+          mountPath: "{{ path_imu }}"
+        - name: parameter-volume
+          mountPath: /config
+          readOnly: true
         securityContext:
           privileged: true
-        # This combines all your tmux send-keys commands into one shell script
-        args: ["ros2", "run", "control_system_pkg", "pid_system_node"]
+        command: ["/bin/bash", "-c"]
+        args:
+          - "source /ros2_ws/install/setup.bash && ros2 run control_system_pkg pid_system_node --ros-args --params-file /config/params.yaml"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -470,37 +469,33 @@ spec:
       labels:
         app: microros-agent
     spec:
-      # Ensure this pod runs on the node where the microcontroller is plugged in
       nodeSelector:
         ros2-hardware: rov-camera
-      # Use host networking for ROS 2 DDS discovery
       hostNetwork: true
       hostIPC: true
-      # Define the shared serial port device from the host
       volumes:
       - name: serial-port-agent
         hostPath:
           path: /dev
       containers:
       - name: microros-agent-container
-        image: zkinhang/microros-with-esptool:0.1
+        image: "{{ microros_image }}"
         imagePullPolicy: Always
-        # Grant privileges to access host hardware and run chmod
         securityContext:
           privileged: true
-        # Mount the shared serial port into this container
         volumeMounts:
         - name: serial-port-agent
           mountPath: /dev
-        command: ["/bin/bash", "-c"]
-        # # sleep command to test
+        # sleep command to test
         # args: ["while true; do sleep 30; done;"]
+        command: ["/bin/bash", "-c"]
         args:
           - >
             source install/setup.bash && 
-            echo "Setting permissions for /dev/ttyUSB0..." && 
-            chmod 777 /dev/ttyUSB0 && 
+            echo "Setting permissions for {{ path_microros_serial }}..." && 
+            chmod 777 {{ path_microros_serial }} && 
             echo "Running esptool..." &&
-            esptool --port /dev/ttyUSB0 run && 
+            esptool --port {{ path_microros_serial }} run && 
             echo "Starting Micro-ROS Agent..." &&
-            ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
+            ros2 run micro_ros_agent micro_ros_agent serial --dev {{ path_microros_serial }}
+

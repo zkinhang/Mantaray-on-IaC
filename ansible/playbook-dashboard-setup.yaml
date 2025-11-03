@@ -1,0 +1,64 @@
+- name: Set up and Expose Kubernetes Dashboard
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    dashboard_manifests: "k8s/dashboard-setup.yaml"
+    token_save_path: "./dashboard-admin-token.txt"
+
+  tasks:
+    - name: 1. Apply all dashboard YAML definitions
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ dashboard_manifests }}"
+
+    - name: 2. Patch dashboard service to use NodePort
+      kubernetes.core.k8s:
+        state: patched
+        kind: Service
+        name: kubernetes-dashboard
+        namespace: kubernetes-dashboard
+        resource_definition:
+          spec:
+            type: NodePort
+
+    - name: 3. Wait for the permanent token to be generated
+      kubernetes.core.k8s_info:
+        kind: Secret
+        name: admin-user-permanent-token
+        namespace: kubernetes-dashboard
+      register: token_secret
+      until: "token_secret.resources | length > 0 and token_secret.resources[0].data.token is defined"
+      retries: 10
+      delay: 5
+
+    - name: 4. Decode and save the token to a local file
+      copy:
+        content: "{{ token_secret.resources[0].data.token | b64decode }}"
+        dest: "{{ token_save_path }}"
+      when: token_secret.resources | length > 0
+
+    - name: 5. Get cluster info to display a helpful message
+      kubernetes.core.k8s_info:
+        kind: Node
+        label_selectors:
+          - "node-role.kubernetes.io/control-plane"
+      register: control_plane_nodes
+
+    - name: 6. Get the NodePort
+      kubernetes.core.k8s_info:
+        kind: Service
+        name: kubernetes-dashboard
+        namespace: kubernetes-dashboard
+      register: dashboard_service
+
+    - name: 7. Print access information
+      debug:
+        msg:
+          - "Dashboard setup is complete!"
+          - "Your permanent admin token has been saved to: {{ token_save_path }}"
+          - "------------------------------------------------------------------"
+          - "Access the dashboard at this URL:"
+          - "https://{{ control_plane_nodes.resources[0].status.addresses | selectattr('type', 'equalto', 'InternalIP') | map(attribute='address') | first }}:{{ dashboard_service.resources[0].spec.ports[0].nodePort }}"
+          - "------------------------------------------------------------------"
+          - "(You will need to accept the browser's self-signed certificate warning)"
