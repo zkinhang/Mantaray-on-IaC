@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: robot-parameters
+data:
+  # This key becomes the filename inside the pod (e.g., params.yaml)
+  params.yaml: |
+    {{ robot_config | to_nice_yaml | indent(4) }}

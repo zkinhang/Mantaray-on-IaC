@@ -1,16 +1,7 @@
-# this node decompose the command from the controller to the six vector for the vehicle
-# pack the vectors in Float32MultiArray and publish to the topic "/receiver/vector",
-# structure of the vector: [forwardInput, rightwardInput, upwardInput, yawInput, pitchInput, rollInput]
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
 from geometry_msgs.msg import Twist
-
-dpad_power = 0.65  # the power of dpad input
-
-# todo: circular servo for linear.z (middle one) to rotate
-# todo: pressure sensor data collect
-
 
 class command_decomposer(Node):
 
@@ -32,13 +23,16 @@ class command_decomposer(Node):
 
         # Get parameter values from external
         self.dpad_power = self.get_parameter('gripper_config.dpad_power').get_parameter_value().double_value
-        self.pwm_min = self.get_parameter('gripper_config.a_pwm_min').get_parameter_value().integer_value
-        self.pwm_max = self.get_parameter('gripper_config.a_pwm_max').get_parameter_value().integer_value
+        
+        self.pwm_min_vertical = self.get_parameter('gripper_config.a_pwm_min').get_parameter_value().integer_value
+        self.pwm_max_vertical = self.get_parameter('gripper_config.a_pwm_max').get_parameter_value().integer_value
         self.open_close_min = self.get_parameter('gripper_config.b_pwm_min').get_parameter_value().integer_value
         self.open_close_max = self.get_parameter('gripper_config.b_pwm_max').get_parameter_value().integer_value
         self.rotation_min = self.get_parameter('gripper_config.c_pwm_min').get_parameter_value().integer_value
         self.rotation_max = self.get_parameter('gripper_config.c_pwm_max').get_parameter_value().integer_value
+        
         self.pwm_step = self.get_parameter('gripper_config.pwm_step').get_parameter_value().integer_value
+        
         # Get initial values as lists of floats
         self.initial_a = self.get_parameter('gripper_config.initial_gripper_a_values').get_parameter_value().double_array_value
         self.initial_b = self.get_parameter('gripper_config.initial_gripper_b_values').get_parameter_value().double_array_value
@@ -84,44 +78,50 @@ class command_decomposer(Node):
     def gripper_listener_callback(self, msg: Twist):
         # Process open/close (linear.x and linear.y)
         if msg.linear.x > 0 and msg.linear.y <= 0:  # Open
-            self.gripper_values[0] = min(self.gripper_values[0] + self.pwm_step, self.a_pwm_max)
+            self.gripper_values[0] = min(self.gripper_values[0] + self.pwm_step, self.open_close_max)
         elif msg.linear.y > 0 and msg.linear.x <= 0:  # Close
-            self.gripper_values[0] = max(self.gripper_values[0] - self.pwm_step, self.a_pwm_min)
+            self.gripper_values[0] = max(self.gripper_values[0] - self.pwm_step, self.open_close_min)
+            
         # Process up/down (linear.z and angular.z)
         if msg.linear.z > 0 and msg.angular.z <= 0:  # Up
-            self.gripper_values[1] = min(self.gripper_values[1] + self.pwm_step, self.b_pwm_max)
+            self.gripper_values[1] = min(self.gripper_values[1] + self.pwm_step, self.pwm_max_vertical)
         elif msg.angular.z > 0 and msg.linear.z <= 0:  # Down
-            self.gripper_values[1] = max(self.gripper_values[1] - self.pwm_step, self.b_pwm_min)
+            self.gripper_values[1] = max(self.gripper_values[1] - self.pwm_step, self.pwm_min_vertical)
+            
         # Process rotation (angular.x and angular.y)
         if msg.angular.x > 0 and msg.angular.y <= 0:  # Rotate CCW
-            self.gripper_values[2] = min(self.gripper_values[2] + self.pwm_step, self.c_pwm_max)
+            self.gripper_values[2] = min(self.gripper_values[2] + self.pwm_step, self.rotation_max)
         elif msg.angular.y > 0 and msg.angular.x <= 0:  # Rotate CW
-            self.gripper_values[2] = max(self.gripper_values[2] - self.pwm_step, self.c_pwm_min)
+            self.gripper_values[2] = max(self.gripper_values[2] - self.pwm_step, self.rotation_min)
+
         # Publish the gripper values
         gripper_command = Float32MultiArray()
-        gripper_command.data = self.gripper_values
+        gripper_command.data = [float(v) for v in self.gripper_values] # Ensure data is float
         self.gripper_publisher.publish(gripper_command)
         self.get_logger().info(f"gripper A values: {self.gripper_values}")
         
     def sec_gripper_listener_callback(self, msg: Twist):
         # Process open/close (linear.x and linear.y)
         if msg.linear.x > 0 and msg.linear.y <= 0:
-            self.sec_gripper_values[0] = min(self.sec_gripper_values[0] + self.pwm_step, self.a_pwm_max)
+            self.sec_gripper_values[0] = min(self.sec_gripper_values[0] + self.pwm_step, self.open_close_max)
         elif msg.linear.y > 0 and msg.linear.x <= 0:
-            self.sec_gripper_values[0] = max(self.sec_gripper_values[0] - self.pwm_step, self.a_pwm_min)
+            self.sec_gripper_values[0] = max(self.sec_gripper_values[0] - self.pwm_step, self.open_close_min)
+            
         # Process up/down (linear.z and angular.z)      
         if msg.linear.z > 0 and msg.angular.z <= 0:
-            self.sec_gripper_values[1] = min(self.sec_gripper_values[1] + self.pwm_step, self.b_pwm_max)
+            self.sec_gripper_values[1] = min(self.sec_gripper_values[1] + self.pwm_step, self.pwm_max_vertical)
         elif msg.angular.z > 0 and msg.linear.z <= 0:
-            self.sec_gripper_values[1] = max(self.sec_gripper_values[1] - self.pwm_step, self.b_pwm_min)
+            self.sec_gripper_values[1] = max(self.sec_gripper_values[1] - self.pwm_step, self.pwm_min_vertical)
+            
         # Process rotation (angular.x and angular.y)
         if msg.angular.x > 0 and msg.angular.y <= 0:
-            self.sec_gripper_values[2] = min(self.sec_gripper_values[2] + self.pwm_step, self.c_pwm_max)
+            self.sec_gripper_values[2] = min(self.sec_gripper_values[2] + self.pwm_step, self.rotation_max)
         elif msg.angular.y > 0 and msg.angular.x <= 0:
-            self.sec_gripper_values[2] = max(self.sec_gripper_values[2] - self.pwm_step, self.c_pwm_min)
+            self.sec_gripper_values[2] = max(self.sec_gripper_values[2] - self.pwm_step, self.rotation_min)
+
         # Publish the gripper values
         gripper_command = Float32MultiArray()
-        gripper_command.data = self.sec_gripper_values
+        gripper_command.data = [float(v) for v in self.sec_gripper_values] # Ensure data is float
         self.sec_gripper_publisher.publish(gripper_command)
         self.get_logger().info(f"gripper B values: {self.sec_gripper_values}")
 

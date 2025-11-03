@@ -7,17 +7,23 @@ from serial.tools.list_ports_common import ListPortInfo
 
 
 class ThrusterBoard:
-    def __init__(self, port, baudrate=115200) -> None:
+    # --- MODIFIED __init__ to accept mapping ---
+    def __init__(self, port, baudrate=115200, mapping=None) -> None:
         self.ser = serial.Serial(port, baudrate, timeout=1/60)
         self.data = ""
-        # self.mapping = [-2,1,-6,5,3,-8,-4,7]
-        self.mapping = [-4,2,3,-1,-5,-8,6,7]
+        
+        if mapping is not None:
+            self.mapping = np.array(mapping)
+        else:
+            # Default mapping for standalone testing
+            self.mapping = np.array([-4,2,3,-1,-5,-8,6,7])
+        
         """
         Thruster config
-        upper layer -> [1,3
-                        5,7]
-        Lower layer -> [2,4
-                        6,8]
+        [1,2]
+        [5,6]
+        [7,8]
+        [3,4]
         """
         self.ratio_preset = [
             0, 0,  # 1,2
@@ -27,7 +33,7 @@ class ThrusterBoard:
         ]
         self.depth: float | None = None
         self.depth_log = []
-        print("ok")
+        print(f"ThrusterBoard initialized on port {port} at {baudrate} baud.")
 
     def read(self) -> bytes:
         """Read data from thruster board
@@ -85,7 +91,7 @@ class ThrusterBoard:
         self.write(data_send)
         return self.read()
 
-
+# Run this script directly for standalone thruster testing
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test individual thrusters')
     parser.add_argument('thruster', type=int, choices=range(1, 9),
@@ -97,13 +103,15 @@ if __name__ == "__main__":
     # list all available ports and connect to device with VID:PID = 1A86:7523
     ports: list[ListPortInfo] = serial.tools.list_ports.comports()
     board = None
-    board_hw_id = "1A86:7523"
+    board_hw_id = "1A86:7523" # Hardcoded for standalone test
+    port_name = "USB0"       # Hardcoded for standalone test
     
     for port, desc, hw_id in sorted(ports):
         print(f"{port}: {desc} [{hw_id}]")
-        if board_hw_id in hw_id or 'USB0' in port:
-            print("ok")
-            board = ThrusterBoard(port)
+        if board_hw_id in hw_id or port_name in port:
+            print(f"Found device, connecting to {port}...")
+            board = ThrusterBoard(port) # Uses default mapping for test
+            break
             
     if board is None:
         print("Device not found")

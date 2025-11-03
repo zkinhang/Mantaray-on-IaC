@@ -1,0 +1,78 @@
+{
+    "pid_system": {
+        "ros__parameters": {
+            "sample_time_sec": 0.05,
+            "step_time_sec": 0.3,
+            "pitch": {
+                "kp": 1.0,
+                "ki": 0.05,
+                "kd": 1.0,
+                "setpoint": 0.0,
+                "output_limits": [-20.0, 20.0]
+            },
+            "yaw": {
+                "kp": 0.7,
+                "ki": 0.01,
+                "kd": 0.1,
+                "setpoint": 0.0,
+                "output_limits": [0.0, 0.0]
+            },
+            "roll": {
+                "kp": 5.0,
+                "ki": 0.0,
+                "kd": 1.0,
+                "setpoint": 0.0,
+                "output_limits": [-5.0, 5.0]
+            },
+            "depth": {
+                "kp": 0.45,
+                "ki": 0.008,
+                "kd": 7.5,
+                "setpoint": null,
+                "output_limits": [0.0, 50.0]
+            }
+        }
+    },
+    "thrusterboard_rosserial": {
+        "ros__parameters": {
+            "thrusterboard_config": {
+                "board_hw_id": "1A86:7523",
+                "port_name": "USB0",
+                "mapping": [-4, 2, -8, 6, 7, 3, -1, -5]
+            },
+            "thruster_direction_matrices": {
+                "HOLD":           [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+                "FORWARD":        [-1.0, -0.8, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+                "UP":             [ 0.0, 0.0, 0.0, 0.0, -1.0, -1.0, -1.0, -1.0 ],
+                "LEFT":           [ 1.0, -1.0, 1.0, -1.0, 0.0, 0.0, 0.0, 0.0 ],
+                "LEFT_YAW":       [ 1.0, -1.0, -1.0, 1.0, 0.0, 0.0, 0.0, 0.0 ],
+                "FRONT_PITCH":    [ 0.0, 0.0, 0.0, 0.0, -1.0, -1.0, 1.0, 1.0 ],
+                "LEFT_ROLL":      [ 0.0, 0.0, 0.0, 0.0, -1.0, 1.0, -1.0, 1.0 ],
+                "STOP":           [ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
+            }
+        }
+    },
+    "ahrs_driver_node": {
+        "ros__parameters": {
+            "serial_port_": "/dev/ttyUSB1"
+        }
+    },
+    "command_decomposer": {
+        "ros__parameters": {
+            "gripper_config": {
+                "dpad_power": 0.65,
+                "pwm_step": 30,
+
+                "a_pwm_min": 550,
+                "a_pwm_max": 2450,
+                "b_pwm_min": 1000,
+                "b_pwm_max": 2000,
+                "c_pwm_min": 1700,
+                "c_pwm_max": 2450,
+
+                "initial_gripper_a_values": [1400.0, 1400.0, 1400.0],
+                "initial_gripper_b_values": [1400.0, 1400.0, 1400.0]
+            }
+        }
+    }
+}
