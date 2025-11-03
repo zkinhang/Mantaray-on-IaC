@@ -10,26 +10,49 @@ from queue import Queue
 import re
 from std_msgs.msg import Bool, Float64
 from custom_interfaces.msg import ThrusterBoardStatus
-from thrusterboard_pkg.Configuration import *
-import os
-
-hold_Movement = RobotMovement(directionMatrix=HOLD)
-xAxis_Movement = RobotMovement(directionMatrix=FORWARD)
-zAxis_Movement = RobotMovement(directionMatrix=UP)
-yAxis_Movement = RobotMovement(directionMatrix=LEFT)
-pitch_Movement = RobotMovement(directionMatrix=FRONT_PITCH)
-yaw_Movement = RobotMovement(directionMatrix=LEFT_YAW)
-roll_Movement = RobotMovement(directionMatrix=LEFT_ROLL)
+from thrusterboard_pkg.Configuration import RobotMovement # Import class only
 
 
 class thrusterboard_rosserial(Node):
 
     def __init__(self):
         super().__init__('thrusterboard_rosserial')
+        
+        # --- DECLARE PARAMETERS (from robot_params.json) ---
+        self.declare_parameter('thrusterboard_config.board_hw_id', '1A86:7523')
+        self.declare_parameter('thrusterboard_config.port_name', 'USB0')
+        self.declare_parameter('thrusterboard_config.mapping', [-4,2,3,-1,-5,-8,6,7])
+
+        default_matrix = [0.0] * 8
+        self.declare_parameter('thruster_direction_matrices.HOLD', default_matrix)
+        self.declare_parameter('thruster_direction_matrices.FORWARD', default_matrix)
+        self.declare_parameter('thruster_direction_matrices.UP', default_matrix)
+        self.declare_parameter('thruster_direction_matrices.LEFT', default_matrix)
+        self.declare_parameter('thruster_direction_matrices.LEFT_YAW', default_matrix)
+        self.declare_parameter('thruster_direction_matrices.FRONT_PITCH', default_matrix)
+        self.declare_parameter('thruster_direction_matrices.LEFT_ROLL', default_matrix)
+        
+        # --- GET PARAMETERS ---
+        self.board_hw_id = self.get_parameter('thrusterboard_config.board_hw_id').get_parameter_value().string_value
+        self.preferred_port_name = self.get_parameter('thrusterboard_config.port_name').get_parameter_value().string_value
+        self.mapping = self.get_parameter('thrusterboard_config.mapping').get_parameter_value().integer_array_value
+
+        # Get matrices and create RobotMovement instances
+        self.hold_Movement = RobotMovement(np.array(self.get_parameter('thruster_direction_matrices.HOLD').get_parameter_value().double_array_value))
+        self.xAxis_Movement = RobotMovement(np.array(self.get_parameter('thruster_direction_matrices.FORWARD').get_parameter_value().double_array_value))
+        self.zAxis_Movement = RobotMovement(np.array(self.get_parameter('thruster_direction_matrices.UP').get_parameter_value().double_array_value))
+        self.yAxis_Movement = RobotMovement(np.array(self.get_parameter('thruster_direction_matrices.LEFT').get_parameter_value().double_array_value))
+        self.pitch_Movement = RobotMovement(np.array(self.get_parameter('thruster_direction_matrices.FRONT_PITCH').get_parameter_value().double_array_value))
+        self.yaw_Movement = RobotMovement(np.array(self.get_parameter('thruster_direction_matrices.LEFT_YAW').get_parameter_value().double_array_value))
+        self.roll_Movement = RobotMovement(np.array(self.get_parameter('thruster_direction_matrices.LEFT_ROLL').get_parameter_value().double_array_value))
+        
+        # --- END OF PARAMETER SECTION ---
+
         self.thrustboard : ThrusterBoard = None
         self.holdMode = False
         self.queue = Queue()
         self.last_args = np.array([0 for _ in range(8)])
+        
         self.publisher_status = self.create_publisher(ThrusterBoardStatus, '/thruster/status', 10)
         self.subscriptions_hold = self.create_subscription(
             Bool, 
@@ -46,6 +69,8 @@ class thrusterboard_rosserial(Node):
             '/pid/cmd_vel',
             self.cmd_listener_callback,
             10)
+        
+        self.get_logger().info(f"Thruster node initialized. HW_ID: {self.board_hw_id}, Port Name: {self.preferred_port_name}")
         self.ack_callback(ThrusterBoardStatus())
 
     def check_connection(self) -> bool:
@@ -54,8 +79,6 @@ class thrusterboard_rosserial(Node):
         Returns:
             bool: True if connected
         """
-        # board_hw_id = "10C4:EA60"
-        board_hw_id = "1A86:7523"
         try:
             if self.thrustboard is None:
                 self.thrustboard = None  # Reset the connection
@@ -63,16 +86,19 @@ class thrusterboard_rosserial(Node):
                 port = ""
                 for i in PL:
                     groups = i.hwid.split(" ")
-                    if 'USB0' in i.device:
-                        self.get_logger().info(i.device)
+                    
+                    # Use parameter for preferred port name
+                    if self.preferred_port_name in i.device: 
+                        self.get_logger().info(f"Found thrusterboard: {i.device}")
                         port = i.device
                         break
                     # find VID:PID in groups
                     for g in groups:
                         if re.match(r"VID:PID=\w{4}:\w{4}", g):
                             vid_pid = g.split("=")[1]
-                            if vid_pid == board_hw_id:
-                                self.get_logger().info(i.device)
+                            # Use parameter for board_hw_id
+                            if vid_pid == self.board_hw_id: 
+                                self.get_logger().info(f"Found device by HW_ID: {i.device}")
                                 port = i.device
                     # if "USB0" in i.device:
                     #     port = i.device
@@ -80,7 +106,7 @@ class thrusterboard_rosserial(Node):
                     # self.get_logger().info('No robot found')
                     pass
                 else:
-                    self.thrustboard = ThrusterBoard(port)
+                    self.thrustboard = ThrusterBoard(port, 115200, self.mapping)
                     self.get_logger().info('Connected to Thrusterboard')
                     sleep(1)
         except Exception as e:
@@ -133,9 +159,9 @@ class thrusterboard_rosserial(Node):
 
     def cmd_listener_callback(self, msg : Twist):
         # x, y, z, pitch, yaw, roll
-        ratio = msg.linear.x * xAxis_Movement.directionMatrix + msg.linear.y * yAxis_Movement.directionMatrix + msg.linear.z * zAxis_Movement.directionMatrix + msg.angular.x * roll_Movement.directionMatrix + msg.angular.y * pitch_Movement.directionMatrix + msg.angular.z * yaw_Movement.directionMatrix
+        ratio = msg.linear.x * self.xAxis_Movement.directionMatrix + msg.linear.y * self.yAxis_Movement.directionMatrix + msg.linear.z * self.zAxis_Movement.directionMatrix + msg.angular.x * self.roll_Movement.directionMatrix + msg.angular.y * self.pitch_Movement.directionMatrix + msg.angular.z * self.yaw_Movement.directionMatrix
         if self.holdMode:
-            ratio += hold_Movement.directionMatrix * 0.1
+            ratio += self.hold_Movement.directionMatrix * 0.1
         # self.get_logger().info(f'Direction Ratio: {msg.linear.x}, {msg.linear.y}, {msg.linear.z}, {msg.angular.x}, {msg.angular.y}, {msg.angular.z}')
         ratio = np.clip(ratio, -1, 1)
         # if all 0 then hold

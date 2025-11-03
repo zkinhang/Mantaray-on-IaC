@@ -17,6 +17,8 @@ class RobotMovement:
     def __init__(self, directionMatrix : np.array) -> None:
         self.directionMatrix = directionMatrix
 
+# --- Default Movement Matrix Definitions (for clarity and testing) ---
+# --- The main ROS2 node will override these with parameters ---
 
 HOLD = np.array([
     1, 1, 1, 1,

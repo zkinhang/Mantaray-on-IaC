@@ -6,8 +6,7 @@ WORKDIR /ros2_ws
 
 # Install build tools and pip
 RUN apt-get update && apt-get install -y \
-    python3-pip \
-    python3-venv \
+    curl \
     libevdev-dev \
     ros-dev-tools \
     # Add C++ dependencies from your CMakeLists.txt
@@ -16,14 +15,17 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a Python virtual environment and activate it for clean package installation
+# Install uv
 ENV VENV_PATH=/opt/venv
-RUN python3 -m venv $VENV_PATH
-ENV PATH="$VENV_PATH/bin:$PATH"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    /root/.local/bin/uv venv $VENV_PATH
 
-# Install Python packages from requirements.txt into the venv
+# Add uv and the venv to the PATH for subsequent RUN commands
+ENV PATH="$VENV_PATH/bin:/root/.local/bin:${PATH}"
+
+# Install Python packages from requirements.txt into the venv using uv
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --no-cache-dir -r requirements.txt
 
 # Copy and build the ROS 2 workspace
 COPY ./src ./src

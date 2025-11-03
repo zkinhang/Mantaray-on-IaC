@@ -1,0 +1,2 @@
+main_ros_image: "zkinhang/manta-ray-ros:latest"
+microros_image: "zkinhang/microros-with-esptool:0.1"

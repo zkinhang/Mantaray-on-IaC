@@ -21,7 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'joystick_reader = controller_pkg.joystick_reader:main',
-            
+            'movement_test = controller_pkg.movement_test:main',
             'thruster_init = controller_pkg.thruster_init:main',
         ],
     },
