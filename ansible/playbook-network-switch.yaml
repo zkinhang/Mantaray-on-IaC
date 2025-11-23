@@ -1,0 +1,86 @@
+---
+- name: 1. Update System-wide DNS (Hosts File)
+  hosts: all_nodes
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - vars/infra-vars.yaml
+  tasks:
+    - name: Update /etc/hosts to resolve cluster nodes locally
+      lineinfile:
+        path: /etc/hosts
+        # Regex matches the hostname at the end of the line
+        regexp: "^.*{{ item }}(\\s|$)"
+        # Replaces the line with: <NEW_IP> <HOSTNAME> <SHORT_HOSTNAME>
+        line: "{{ hostvars[item]['ansible_k3s_server_ip'] | default(hostvars[item]['ansible_k3s_agent_ip']) }} {{ item }} {{ item | regex_replace('\\..*$', '') }}"
+        state: present
+      loop: "{{ groups['all_nodes'] }}"
+
+- name: 2. Reconfigure K3s Agents for New Network
+  hosts: k3s_agents
+  become: yes
+  vars_files:
+    - vars/infra-vars.yaml
+  vars:
+    master_host: "{{ groups['k3s_server'][0] }}"
+  
+  tasks:
+    - name: Calculate Network Targets
+      set_fact:
+        target_ip: "{{ hostvars[inventory_hostname]['ansible_k3s_agent_ip'] }}"
+        target_iface: "{{ node_interface_map[inventory_hostname][connection_mode] }}"
+        k3s_node_name: "{{ inventory_hostname | regex_replace('\\.local$', '') }}"
+
+    - name: Clean up old CNI interfaces (Reset Networking)
+      shell: |
+        ip link delete cni0 || true
+        ip link delete flannel.1 || true
+        rm -rf /var/lib/rancher/k3s/agent/etc/cni/net.d/*
+      ignore_errors: yes
+
+    - name: Update K3s Config (config.yaml)
+      blockinfile:
+        path: "{{ k3s_config_dir }}/config.yaml"
+        create: yes
+        marker: "# {mark} ANSIBLE MANAGED K3S NETWORKING"
+        block: |
+          node-ip: "{{ target_ip }}"
+          flannel-iface: "{{ target_iface }}"
+
+    - name: Deregister Node from Master (Force Re-registration)
+      command: "kubectl delete node {{ k3s_node_name }} --ignore-not-found=true"
+      delegate_to: "{{ master_host }}"
+      
+    - name: Restart K3s Agent
+      systemd:
+        name: k3s-agent
+        state: restarted
+        daemon_reload: yes
+
+- name: 3. Reconfigure K3s Server for New Network
+  hosts: k3s_server
+  become: yes
+  vars_files:
+    - vars/infra-vars.yaml
+  tasks:
+    - name: Calculate Server Targets
+      set_fact:
+        target_ip: "{{ hostvars[inventory_hostname]['ansible_k3s_server_ip'] }}"
+        target_iface: "{{ node_interface_map[inventory_hostname][connection_mode] }}"
+
+    - name: Update K3s Server Config
+      blockinfile:
+        path: "{{ k3s_config_dir }}/config.yaml"
+        create: yes
+        marker: "# {mark} ANSIBLE MANAGED K3S SERVER NETWORKING"
+        block: |
+          node-ip: "{{ target_ip }}"
+          flannel-iface: "{{ target_iface }}"
+          # Ensure we bind to the new IP
+          bind-address: "{{ target_ip }}"
+          advertise-address: "{{ target_ip }}"
+
+    - name: Restart K3s Server
+      systemd:
+        name: k3s
+        state: restarted

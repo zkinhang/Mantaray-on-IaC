@@ -1,5 +1,5 @@
-main_ros_image: "zkinhang/manta-ray-ros:latest"
-microros_image: "zkinhang/microros-with-esptool:0.1"
+main_ros_image: "mantaray.local:5000/manta-ray-ros:latest"
+microros_image: "mantaray.local:5000/microros-with-esptool:0.1"
 
 all_app_deployments:
   - controller-deployment
