@@ -1,0 +1,35 @@
+# K3s installation paths
+k3s_setup_dir: "/home/edwin/Desktop/ros_docker/k3s-setup" # Put absolute path here
+k3s_bin_dir: "/usr/local/bin"
+k3s_config_dir: "/etc/rancher/k3s"
+k3s_data_dir: "/var/lib/rancher/k3s"
+
+# Docker configuration
+docker_config_dir: "/etc/docker"
+
+# Local registry configuration
+registry_data_dir: "/opt/local-registry"
+registry_port: "5000"
+
+# Kubernetes configuration
+kube_config_dir: ".kube"
+
+# Default node labels (can be overridden by ros2_hardware_label in inventory)
+default_node_labels:
+  mantaray.local: "land-pc"
+  rov-cam.local: "rov-main"
+  rov.local: "rov-camera"
+
+# MAPPING: Define physical interface names for each node
+node_interface_map:
+  mantaray.local:
+    eth: "enp3s0" 
+    wlan: "wlp2s0"
+  
+  rov.local:
+    eth: "eth0"
+    wlan: "wlan0"
+  
+  rov-cam.local:
+    eth: "eth0"
+    wlan: "wlan0"
