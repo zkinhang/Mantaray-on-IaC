@@ -3,62 +3,96 @@
   gather_facts: false
 
   vars:
-    dashboard_manifests: "k8s/dashboard-setup.yaml"
+    dashboard_manifests_dir: "k8s/cluster-services"
     token_save_path: "./dashboard-admin-token.txt"
+    # We define a specific port
+    dashboard_port: 30443
 
   tasks:
-    - name: 1. Apply all dashboard YAML definitions
+    - name: Apply all dashboard YAML definitions
       kubernetes.core.k8s:
         state: present
-        src: "{{ dashboard_manifests }}"
+        src: "{{ item }}"
+      loop: "{{ lookup('fileglob', dashboard_manifests_dir + '/*.yaml', wantlist=True) }}"
 
-    - name: 2. Patch dashboard service to use NodePort
+    - name: Patch dashboard service to use specific NodePort
       kubernetes.core.k8s:
         state: patched
         kind: Service
         name: kubernetes-dashboard
         namespace: kubernetes-dashboard
-        resource_definition:
+        definition:
           spec:
             type: NodePort
+            ports:
+              - port: 443
+                targetPort: 8443
+                nodePort: "{{ dashboard_port }}"
 
-    - name: 3. Wait for the permanent token to be generated
+    - name: Pin Dashboard pods to Mantaray
+      kubernetes.core.k8s:
+        state: patched
+        kind: Deployment
+        name: "{{ item }}"
+        namespace: kubernetes-dashboard
+        definition:
+          spec:
+            template:
+              spec:
+                nodeSelector:
+                  kubernetes.io/hostname: mantaray
+      loop:
+        - kubernetes-dashboard
+        - dashboard-metrics-scraper
+
+    - name: 3. Force a rolling update by annotating the Deployments
+      kubernetes.core.k8s:
+        state: patched
+        kind: Deployment
+        name: "{{ item }}"
+        namespace: kubernetes-dashboard
+        definition:
+          spec:
+            template:
+              metadata:
+                annotations:
+                  # This annotation changes on every run, forcing a redeploy
+                  ansible.com/force-redeploy: "{{ lookup('pipe', 'date -u +%FT%TZ') }}"
+      loop:
+        - kubernetes-dashboard
+        - dashboard-metrics-scraper
+
+    - name: Wait for the permanent token to be generated
       kubernetes.core.k8s_info:
         kind: Secret
+        # Ensure your manifests create a secret named exactly this
         name: admin-user-permanent-token
         namespace: kubernetes-dashboard
       register: token_secret
       until: "token_secret.resources | length > 0 and token_secret.resources[0].data.token is defined"
-      retries: 10
+      retries: 20
       delay: 5
 
-    - name: 4. Decode and save the token to a local file
+    - name: Decode and save the token to a local file
       copy:
         content: "{{ token_secret.resources[0].data.token | b64decode }}"
         dest: "{{ token_save_path }}"
+        mode: '0600'
       when: token_secret.resources | length > 0
 
-    - name: 5. Get cluster info to display a helpful message
-      kubernetes.core.k8s_info:
-        kind: Node
-        label_selectors:
-          - "node-role.kubernetes.io/control-plane"
-      register: control_plane_nodes
+    - name: Get Master IP
+      shell: |
+        kubectl get node mantaray -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}'
+      register: master_ip_output
+      changed_when: false
 
-    - name: 6. Get the NodePort
-      kubernetes.core.k8s_info:
-        kind: Service
-        name: kubernetes-dashboard
-        namespace: kubernetes-dashboard
-      register: dashboard_service
-
-    - name: 7. Print access information
+    - name: Print access information
       debug:
         msg:
           - "Dashboard setup is complete!"
-          - "Your permanent admin token has been saved to: {{ token_save_path }}"
           - "------------------------------------------------------------------"
-          - "Access the dashboard at this URL:"
-          - "https://{{ control_plane_nodes.resources[0].status.addresses | selectattr('type', 'equalto', 'InternalIP') | map(attribute='address') | first }}:{{ dashboard_service.resources[0].spec.ports[0].nodePort }}"
+          - "1. Open this URL: https://{{ master_ip_output.stdout }}:{{ dashboard_port }}"
+          - "2. Copy the token from: {{ token_save_path }}"
           - "------------------------------------------------------------------"
-          - "(You will need to accept the browser's self-signed certificate warning)"
+          - "NOTE: If Chrome says 'Your connection is not private' and creates a barrier:"
+          - "      Click anywhere on the background of the warning page and type: thisisunsafe"
