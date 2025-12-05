@@ -41,6 +41,13 @@
     k3s_data_dir: "{{ hostvars['localhost']['k3s_data_dir'] }}"
     docker_config_dir: "{{ hostvars['localhost']['docker_config_dir'] }}"
   tasks:
+    - name: Ensure k3s server hostname resolves on all nodes
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ k3s_server_ip }} {{ k3s_server_host }} {{ k3s_server_host | regex_replace('\\..*$', '') }}"
+        regexp: "^.*{{ k3s_server_host }}(\\s|$)"
+        state: present
+
     - name: Ensure cluster hosts resolve locally
       lineinfile:
         path: /etc/hosts
