@@ -1,3 +1,9 @@
+# APP documentations
+
+[Project Documentation](https://mellow-cap-3e1.notion.site/ebd/28700ae3fb2281b3afd4f744baa0d396?v=28700ae3fb2281af9793000cdafe78d9)
+
+---
+
 # Ansible Playbook Manual
 
 ## Quick Command Reference
@@ -241,9 +247,3 @@ sudo chown "$USER":"$USER" ~/.kube/config
 - [ ] Fix automatic Kubernetes permission configuration
 - [ ] CI/CD pipeline for uploading images to local registry
 - [ ] Control panel UI
-
----
-
-## Additional Resources
-
-[Project Documentation](https://mellow-cap-3e1.notion.site/ebd/28700ae3fb2281b3afd4f744baa0d396?v=28700ae3fb2281af9793000cdafe78d9)

@@ -38,7 +38,7 @@
             "thrusterboard_config": {
                 "board_hw_id": "1A86:7523",
                 "port_name": "USB0",
-                "mapping": [-4, 2, -8, 6, 7, 3, -1, -5]
+                "mapping": [2, 6, -4, -8, -5, 3, -1, 7]
             },
             "thruster_direction_matrices": {
                 "HOLD":           [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
