@@ -1,20 +1,26 @@
 ---
-- name: 0. Initialize Network Profile
+# -----------------------------------------------------------------------------
+# STEP 0: INITIALIZE VARIABLES
+# -----------------------------------------------------------------------------
+- name: 0. Initialize Network Configuration
   hosts: all_nodes
-  gather_facts: false # Cannot gather facts yet, we might not have an IP!
+  gather_facts: false
   vars_files:
     - vars/infra-vars.yaml
   tasks:
-    - name: Set Ansible Host IP based on Profile
+    - name: Resolve IP and Interface
       set_fact:
-        # This tells Ansible where to SSH to
-        ansible_host: "{{ network_profiles[net_profile][inventory_hostname] }}"
-        # This sets our internal variable for K3s config
-        ansible_k3s_ip: "{{ network_profiles[net_profile][inventory_hostname] }}"
-        # Map specific server/agent vars for backward compatibility
-        ansible_k3s_server_ip: "{{ network_profiles[net_profile][groups['k3s_server'][0]] }}"
-        ansible_k3s_agent_ip: "{{ network_profiles[net_profile][inventory_hostname] }}"
+        target_ip: "{{ ansible_k3s_server_ip | default(ansible_k3s_agent_ip) }}"
+        target_iface: "{{ node_interface_map[inventory_hostname][connection_mode] }}"
 
+    - name: Set Connection Facts
+      set_fact:
+        ansible_host: "{{ target_ip }}"
+        ansible_k3s_ip: "{{ target_ip }}"
+
+# -----------------------------------------------------------------------------
+# STEP 1: HOSTS FILE UPDATE
+# -----------------------------------------------------------------------------
 - name: 1. Update System-wide DNS (Hosts File)
   hosts: all_nodes
   become: yes
@@ -22,10 +28,26 @@
   vars_files:
     - vars/infra-vars.yaml
   tasks:
+    - name: Disable manage_etc_hosts in cloud-init
+      lineinfile:
+        path: /etc/cloud/cloud.cfg
+        regexp: '^\s*manage_etc_hosts:.*'
+        line: "manage_etc_hosts: false"
+        state: present
+      ignore_errors: yes
+
+    - name: Comment out update_etc_hosts module in cloud.cfg
+      replace:
+        path: /etc/cloud/cloud.cfg
+        regexp: '^\s*-\s*update_etc_hosts'
+        replace: ' # - update_etc_hosts'
+      ignore_errors: yes
+
     - name: Update /etc/hosts to resolve cluster nodes locally
       lineinfile:
         path: /etc/hosts
         regexp: "^.*{{ item }}(\\s|$)"
+        # We use hostvars to look up the IP of other nodes
         line: "{{ hostvars[item]['ansible_k3s_server_ip'] | default(hostvars[item]['ansible_k3s_agent_ip']) }} {{ item }} {{ item | regex_replace('\\..*$', '') }}"
         state: present
       loop: "{{ groups['all_nodes'] }}"
@@ -39,21 +61,20 @@
   vars_files:
     - vars/infra-vars.yaml
   tasks:
-    - name: Calculate Server Targets
-      set_fact:
-        target_ip: "{{ hostvars[inventory_hostname]['ansible_k3s_server_ip'] }}"
-        target_iface: "{{ node_interface_map[inventory_hostname][connection_mode] }}"
 
     # 1. STOP EVERYTHING
     - name: Kill all K3s processes (Force Cleanup)
       command: /usr/local/bin/k3s-killall.sh
       ignore_errors: yes
 
-    # 2. WIPE THE DATABASE (Fixes the instability/crashing)
-    - name: Reset K3s State (Fix etcd IP mismatch)
+    # 2. WIPE THE DATABASE
+    - name: Reset K3s State (Fix etcd IP and Certs)
       file:
-        path: /var/lib/rancher/k3s/server/db
+        path: "{{ item }}"
         state: absent
+      loop:
+        - /var/lib/rancher/k3s/server/db
+        - /var/lib/rancher/k3s/server/tls
 
     # 3. UPDATE CONFIG
     - name: Remove old K3s Server Config blocks
@@ -76,7 +97,26 @@
             - "{{ target_ip }}"
             - "{{ inventory_hostname }}"
 
-    # 4. START FRESH
+    - name: Update registries.yaml
+      copy:
+        dest: "{{ k3s_config_dir }}/registries.yaml"
+        mode: '0600'
+        content: |
+          mirrors:
+            "{{ inventory_hostname }}:5000":
+              endpoint:
+                - "http://{{ inventory_hostname }}:5000"
+            "{{ target_ip }}:5000":
+              endpoint:
+                - "http://{{ target_ip }}:5000"
+          configs:
+            "{{ inventory_hostname }}:5000":
+              tls:
+                insecure_skip_verify: true
+            "{{ target_ip }}:5000":
+              tls:
+                insecure_skip_verify: true
+
     - name: Start K3s Server
       systemd:
         name: k3s
@@ -92,8 +132,21 @@
       delay: 5
       changed_when: false
 
+    - name: Wait for K3s Node Token to be generated
+      wait_for:
+        path: /var/lib/rancher/k3s/server/node-token
+
+    - name: Fetch K3s Node Token
+      slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      register: k3s_token_base64
+
+    - name: Decode Token
+      set_fact:
+        fresh_k3s_token: "{{ k3s_token_base64.content | b64decode | trim }}"
+
 # -----------------------------------------------------------------------------
-# STEP 3: AGENT RECONFIGURATION (MUST BE SECOND)
+# STEP 3: AGENT RECONFIGURATION
 # -----------------------------------------------------------------------------
 - name: 3. Reconfigure K3s Agents for New Network
   hosts: k3s_agents
@@ -102,13 +155,25 @@
     - vars/infra-vars.yaml
   vars:
     master_host: "{{ groups['k3s_server'][0] }}"
+    master_ip: "{{ hostvars[groups['k3s_server'][0]]['ansible_k3s_server_ip'] }}"
+    real_token: "{{ hostvars[groups['k3s_server'][0]]['fresh_k3s_token'] }}"
   
   tasks:
-    - name: Calculate Network Targets
-      set_fact:
-        target_ip: "{{ hostvars[inventory_hostname]['ansible_k3s_agent_ip'] }}"
-        target_iface: "{{ node_interface_map[inventory_hostname][connection_mode] }}"
-        k3s_node_name: "{{ inventory_hostname | regex_replace('\\.local$', '') }}"
+    - name: Stop K3s Agent
+      systemd:
+        name: k3s-agent
+        state: stopped
+
+    - name: Wipe All Agent Identity Files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/lib/rancher/k3s/agent/client-ca.crt
+        - /var/lib/rancher/k3s/agent/server-ca.crt
+        - /var/lib/rancher/k3s/agent/token
+        - /var/lib/rancher/k3s/agent/kubelet.kubeconfig
+        - /etc/rancher/k3s/k3s.yaml # Just in case
 
     - name: Clean up old CNI interfaces (Reset Networking)
       shell: |
@@ -118,6 +183,27 @@
       ignore_errors: yes
 
     # CLEANUP: Remove old inconsistent blocks
+    - name: Update registries.yaml on Agent
+      copy:
+        dest: "{{ k3s_config_dir }}/registries.yaml"
+        mode: '0600'
+        # We configure the agent to trust the MASTER'S registry
+        content: |
+          mirrors:
+            "{{ master_host }}:5000":
+              endpoint:
+                - "http://{{ master_host }}:5000"
+            "{{ master_ip }}:5000":
+              endpoint:
+                - "http://{{ master_ip }}:5000"
+          configs:
+            "{{ master_host }}:5000":
+              tls:
+                insecure_skip_verify: true
+            "{{ master_ip }}:5000":
+              tls:
+                insecure_skip_verify: true
+
     - name: Remove old K3s Agent Config blocks
       blockinfile:
         path: "{{ k3s_config_dir }}/config.yaml"
@@ -128,22 +214,30 @@
       blockinfile:
         path: "{{ k3s_config_dir }}/config.yaml"
         create: yes
-        marker: "# {mark} ANSIBLE MANAGED K3S NETWORKING" # Unified Marker
+        marker: "# {mark} ANSIBLE MANAGED K3S NETWORKING"
         block: |
           node-ip: "{{ target_ip }}"
           flannel-iface: "{{ target_iface }}"
           server: "https://{{ hostvars[master_host]['ansible_k3s_server_ip'] }}:6443" 
+          token: "{{ real_token }}"
 
-    - name: Deregister Node from Master (Force Re-registration)
-      command: "kubectl delete node {{ k3s_node_name }} --ignore-not-found=true"
-      delegate_to: "{{ master_host }}"
-      
-    - name: Restart K3s Agent
+    - name: Update K3S_URL and K3S_TOKEN in service env
+      blockinfile:
+        path: /etc/systemd/system/k3s-agent.service.env
+        create: yes
+        marker: "# {mark} ANSIBLE MANAGED NETWORK SETTINGS"
+        block: |
+          K3S_URL=https://{{ master_ip }}:6443
+          K3S_TOKEN={{ real_token }}
+
+    - name: Start K3s Agent
       systemd:
         name: k3s-agent
-        state: restarted
+        state: started
         daemon_reload: yes
-
+# -----------------------------------------------------------------------------
+# STEP 4: LABELS
+# -----------------------------------------------------------------------------
 - name: 4. Restore Node Labels and Annotations
   hosts: k3s_server
   become: yes
@@ -153,7 +247,6 @@
     - name: Wait for all cluster nodes to be Ready
       shell: "kubectl get nodes --no-headers | grep -w 'Ready' | wc -l"
       register: ready_nodes_count
-      # Keep checking until the number of Ready nodes equals the number of hosts in inventory
       until: ready_nodes_count.stdout | int == groups['all_nodes'] | length
       retries: 60
       delay: 5
@@ -166,7 +259,7 @@
         --overwrite
       loop: "{{ groups['all_nodes'] }}"
 
-    - name: Annotate nodes with current IP (For debugging)
+    - name: Annotate nodes with current IP
       command: >
         kubectl annotate node {{ item | regex_replace('\.local$', '') }} 
         ros2-node-ip={{ hostvars[item]['ansible_k3s_server_ip'] | default(hostvars[item]['ansible_k3s_agent_ip']) }} 
