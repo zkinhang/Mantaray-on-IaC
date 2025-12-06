@@ -41,6 +41,13 @@
     k3s_data_dir: "{{ hostvars['localhost']['k3s_data_dir'] }}"
     docker_config_dir: "{{ hostvars['localhost']['docker_config_dir'] }}"
   tasks:
+    - name: Ensure k3s server hostname resolves on all nodes
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ k3s_server_ip }} {{ k3s_server_host }} {{ k3s_server_host | regex_replace('\\..*$', '') }}"
+        regexp: "^.*{{ k3s_server_host }}(\\s|$)"
+        state: present
+
     - name: Ensure cluster hosts resolve locally
       lineinfile:
         path: /etc/hosts
@@ -483,7 +490,7 @@
                        | default(ansible_default_ipv4.address) }}"
           flannel-iface: "{{ ansible_default_ipv4.interface }}"
       when: inventory_hostname in groups['k3s_server']
-      notify: Restart K3s Server
+      notify: Restart K3s
 
     # ---- Agent: enforce node-ip + flannel-iface in config.yaml ----
     - name: Ensure k3s agent config has stable node-ip and flannel iface
@@ -496,7 +503,7 @@
                        | default(ansible_default_ipv4.address) }}"
           flannel-iface: "{{ ansible_default_ipv4.interface }}"
       when: inventory_hostname in groups['k3s_agents']
-      notify: Restart K3s Agent
+      notify: Restart K3s
 
     # ---- Remove duplicate --node-ip from systemd unit files (if present) ----
     - name: Strip explicit --node-ip from k3s server systemd unit (avoid duplicates)
@@ -507,7 +514,7 @@
       when:
         - inventory_hostname in groups['k3s_server']
         - "'k3s.service' in ansible_facts.services"
-      notify: Restart K3s Server
+      notify: Restart K3s
 
     - name: Normalize k3s-agent ExecStart to simple form (no args)
       lineinfile:
@@ -516,7 +523,29 @@
         line: 'ExecStart=/usr/local/bin/k3s agent'
       when:
         - inventory_hostname in groups['k3s_agents']
-        - "'k3s-agent.service'"
+        - "'k3s-agent.service' in ansible_facts.services"
+      notify: Restart K3s
+
+  handlers:
+    - name: Restart K3s Server
+      systemd:
+        name: k3s
+        state: restarted
+        daemon_reload: true
+      timeout: 60
+      ignore_errors: true
+      listen: Restart K3s
+      when: inventory_hostname in groups['k3s_server']
+
+    - name: Restart K3s Agent
+      systemd:
+        name: k3s-agent
+        state: restarted
+        daemon_reload: true
+      timeout: 60
+      ignore_errors: true
+      listen: Restart K3s
+      when: inventory_hostname in groups['k3s_agents']
         
 - name: Label Kubernetes nodes based on inventory IPs
   hosts: k3s_server

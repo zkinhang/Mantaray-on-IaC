@@ -24,7 +24,7 @@ default_node_labels:
 node_interface_map:
   mantaray.local:
     eth: "enp3s0" 
-    wlan: "wlp2s0"
+    wlan: "wlo1"
   
   rov.local:
     eth: "eth0"
