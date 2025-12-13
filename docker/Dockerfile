@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     libopencv-dev \
     libcurl4-openssl-dev \
     libssl-dev \
+    binutils \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /ros2_ws
@@ -38,7 +39,7 @@ RUN ["/bin/bash", "-c", " \
 "]
 
 # Build the C++ nodes
-RUN ["/bin/bash", "-c", "cmake -S src/http_streamer -B src/http_streamer/build && cmake --build src/http_streamer/build"]
+RUN strip --strip-unneeded install/http_streamer/lib/http_streamer/* || true
 
 # --- Final Stage ---
 # This stage creates the small, final image for running the nodes.
@@ -70,11 +71,7 @@ COPY --from=builder /ros2_ws/install ./install
 COPY --from=builder /ros2_ws/src/launch_file /ros2_ws/src/launch_file
 
 # Copy the microros folder
-COPY --from=builder /ros2_ws/src/microRos /ros2_ws/src/microRos
-
-# Copy the compiled C++ executables into a directory in the PATH
-COPY --from=builder /ros2_ws/src/http_streamer/build/httpGetImage /usr/local/bin/
-COPY --from=builder /ros2_ws/src/http_streamer/build/httpGetImage_cam /usr/local/bin/
+# COPY --from=builder /ros2_ws/src/microRos /ros2_ws/src/microRos
 
 # Copy and set up the entrypoint script
 ENV PATH="/ros2_ws/.venv/bin:$PATH"
