@@ -258,6 +258,7 @@
         ros2-hardware={{ default_node_labels[item] }} 
         --overwrite
       loop: "{{ groups['all_nodes'] }}"
+      tags: labels
 
     - name: Annotate nodes with current IP
       command: >
@@ -265,3 +266,4 @@
         ros2-node-ip={{ hostvars[item]['ansible_k3s_server_ip'] | default(hostvars[item]['ansible_k3s_agent_ip']) }} 
         --overwrite
       loop: "{{ groups['all_nodes'] }}"
+      tags: labels
