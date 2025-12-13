@@ -43,7 +43,7 @@ RUN strip --strip-unneeded install/http_streamer/lib/http_streamer/* || true
 
 # --- Final Stage ---
 # This stage creates the small, final image for running the nodes.
-FROM ros:jazzy-ros-base
+FROM ros:jazzy-ros-core
 
 # Install only the RUNTIME dependencies needed
 RUN apt-get update && apt-get install -y \
@@ -54,6 +54,9 @@ RUN apt-get update && apt-get install -y \
     libcurl4 \
     libssl3 \
     ros-jazzy-foxglove-bridge \
+    net-tools \
+    iputils-ping \
+    vim \
     && rm -rf /var/lib/apt/lists/*
 
 # # Create the 'input' group with the specific GID to match the host
