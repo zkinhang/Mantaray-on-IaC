@@ -2,11 +2,11 @@
 # This stage installs dependencies, builds the workspace, and installs Python packages.
 FROM ros:jazzy-ros-base AS builder
 
-WORKDIR /ros2_ws
+# Copy uv from official image
+COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /bin/uv
 
 # Install build tools and pip
 RUN apt-get update && apt-get install -y \
-    curl \
     libevdev-dev \
     ros-dev-tools \
     # Add C++ dependencies from your CMakeLists.txt
@@ -15,17 +15,13 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-ENV VENV_PATH=/opt/venv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    /root/.local/bin/uv venv $VENV_PATH
+WORKDIR /ros2_ws
 
-# Add uv and the venv to the PATH for subsequent RUN commands
-ENV PATH="$VENV_PATH/bin:/root/.local/bin:${PATH}"
-
-# Install Python packages from requirements.txt into the venv using uv
-COPY requirements.txt .
-RUN uv pip install --no-cache-dir -r requirements.txt
+# use uv sync with pyproject.toml
+ENV VENV_PATH=/ros2_ws/.venv
+COPY docker/pyproject.toml ./pyproject.toml
+COPY docker/uv.lock ./uv.lock
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy and build the ROS 2 workspace
 COPY ./src ./src
@@ -65,7 +61,7 @@ RUN groupadd --gid 995 input
 WORKDIR /ros2_ws
 
 # Copy installed Python packages from the builder's virtual environment
-COPY --from=builder /opt/venv/lib/python3.12/site-packages /usr/lib/python3/dist-packages
+COPY --from=builder /ros2_ws/.venv /ros2_ws/.venv
 
 # Copy the built ROS 2 workspace from the builder stage
 COPY --from=builder /ros2_ws/install ./install
@@ -81,9 +77,9 @@ COPY --from=builder /ros2_ws/src/http_streamer/build/httpGetImage /usr/local/bin
 COPY --from=builder /ros2_ws/src/http_streamer/build/httpGetImage_cam /usr/local/bin/
 
 # Copy and set up the entrypoint script
+ENV PATH="/ros2_ws/.venv/bin:$PATH"
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh   # - ./src:/ros2_ws/src
-ENTRYPOINT ["/entrypoint.sh"]
+RUN chmod +x /entrypoint.sh
 
-# Default command if none is provided
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["bash"]

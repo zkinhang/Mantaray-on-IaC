@@ -1,0 +1,19 @@
+[project]
+name = "mantaray-robot-node"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "inputs",
+    "evdev",
+    "empy",
+    "catkin_pkg",
+    "numpy",
+    "lark",
+    "cv_bridge",
+    "pygame",
+    "textual",
+    "opencv-python",
+    "requests",
+    "pyserial",
+    "simple_pid",
+]
