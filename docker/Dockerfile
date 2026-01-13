@@ -24,18 +24,31 @@ COPY docker/pyproject.toml ./pyproject.toml
 COPY docker/uv.lock ./uv.lock
 RUN uv sync --frozen --no-dev --no-install-project
 
+
+RUN rm -rf .venv/lib/python3.12/site-packages/numpy* \
+    && rm -rf .venv/lib/python3.12/site-packages/yaml* \
+    && rm -rf .venv/lib/python3.12/site-packages/PyYAML* \
+    && rm -rf .venv/lib/python3.12/site-packages/tornado* \
+    && rm -rf .venv/lib/python3.12/site-packages/setuptools* \
+    && rm -rf .venv/lib/python3.12/site-packages/wheel* \
+    && find .venv -name "__pycache__" -type d -exec rm -rf {} +
+
+COPY ./src/ros2/serial_ros2 ./src/serial/ros2/serial_ros2
+
+RUN ["/bin/bash", "-c", " \
+    source /opt/ros/jazzy/setup.bash && \
+    echo '--- Building serial dependency (Cached Layer) ---' && \
+    colcon build --packages-select serial \
+"]
+
 # Copy and build the ROS 2 workspace
 COPY ./src ./src
 # Build serial first, then source and build the rest
 RUN ["/bin/bash", "-c", " \
     source /opt/ros/jazzy/setup.bash && \
-    echo '--- Building serial dependency first ---' && \
-    colcon build --packages-select serial && \
-    echo '--- Sourcing the local workspace to find the new package ---' && \
     source install/setup.bash && \
-    echo '--- Building all remaining packages ---' && \
-    colcon build && \
-    source install/setup.bash \
+    echo '--- Building remaining packages ---' && \
+    colcon build --packages-skip serial \
 "]
 
 # Build the C++ nodes
@@ -46,18 +59,19 @@ RUN strip --strip-unneeded install/http_streamer/lib/http_streamer/* || true
 FROM ros:jazzy-ros-core
 
 # Install only the RUNTIME dependencies needed
-RUN apt-get update && apt-get install -y \
-    libopencv-core* \
-    libopencv-imgproc* \
-    libopencv-imgcodecs* \
-    libopencv-highgui* \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-opencv \
+    python3-numpy \
     libcurl4 \
     libssl3 \
+    ros-jazzy-cv-bridge \
     ros-jazzy-foxglove-bridge \
+    ros-jazzy-rosbridge-server \
     net-tools \
     iputils-ping \
-    vim \
-    && rm -rf /var/lib/apt/lists/*
+    vim-tiny \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/vim.tiny /usr/bin/vim
 
 # # Create the 'input' group with the specific GID to match the host
 RUN groupadd --gid 995 input
@@ -78,6 +92,8 @@ COPY --from=builder /ros2_ws/src/launch_file /ros2_ws/src/launch_file
 
 # Copy and set up the entrypoint script
 ENV PATH="/ros2_ws/.venv/bin:$PATH"
+ENV PYTHONPATH="/usr/lib/python3/dist-packages:/ros2_ws/.venv/lib/python3.12/site-packages:$PYTHONPATH"
+
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

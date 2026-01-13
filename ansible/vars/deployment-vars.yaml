@@ -17,3 +17,4 @@ all_app_deployments:
   - thrusterboard-deployment
   - pid-system-deployment
   - microros-agent-deployment
+  - rosbridge-server-deployment

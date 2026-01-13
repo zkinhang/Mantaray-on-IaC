@@ -7,13 +7,10 @@ dependencies = [
     "evdev",
     "empy",
     "catkin_pkg",
-    "numpy",
     "lark",
-    "cv_bridge",
     "pygame",
     "textual",
-    "opencv-python",
     "requests",
     "pyserial",
-    "simple_pid",
+    "simple_pid"
 ]
