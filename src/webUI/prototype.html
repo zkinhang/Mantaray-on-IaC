@@ -73,12 +73,6 @@
         .video-feed .status-indicator.error {
             color: #f00;
         }
-        .video-feed .fps-indicator {
-            text-align: center;
-            font-size: 0.8em;
-            margin-top: 5px;
-            color: #888;
-        }
     </style>
 </head>
 <body>
@@ -93,15 +87,13 @@
         <div class="video-container">
             <div class="video-feed">
                 <h4>ROV Camera</h4>
-                <img id="rov-feed" src="" alt="ROV Camera Feed" style="width: 640px;">
-                <div id="rov-status" class="status-indicator">Connecting...</div>
-                <div id="rov-fps" class="fps-indicator">FPS: --</div>
+                <img id="rov-feed" src="http://rov:30001/stream" alt="ROV Camera Feed" style="width: 640px;">
+                <div id="rov-status" class="status-indicator">Connected</div>
             </div>
             <div class="video-feed">
                 <h4>ROV-CAM Camera</h4>
-                <img id="rov-cam-feed" src="" alt="ROV-CAM Camera Feed" style="width: 640px;">
-                <div id="rov-cam-status" class="status-indicator">Connecting...</div>
-                <div id="rov-cam-fps" class="fps-indicator">FPS: --</div>
+                <img id="rov-cam-feed" src="http://rov-cam:30002/stream" alt="ROV-CAM Camera Feed" style="width: 640px;">
+                <div id="rov-cam-status" class="status-indicator">Connected</div>
             </div>
         </div>
     </div>
@@ -146,104 +138,16 @@
 
         let currentMovementTimer = null;
 
-        // --- VIDEO FEED CONFIGURATION ---
-        const VIDEO_FEEDS = {
-            rov: {
-                url: 'http://rov:30001/video_feed',
-                imgElement: null,
-                statusElement: null,
-                fpsElement: null,
-                isRunning: false,
-                frameCount: 0,
-                lastFpsTime: Date.now(),
-                consecutiveErrors: 0
-            },
-            rovCam: {
-                url: 'http://rov-cam:30002/video_feed',
-                imgElement: null,
-                statusElement: null,
-                fpsElement: null,
-                isRunning: false,
-                frameCount: 0,
-                lastFpsTime: Date.now(),
-                consecutiveErrors: 0
-            }
+        // Monitor video feed status
+        document.getElementById('rov-feed').onerror = function() {
+            document.getElementById('rov-status').textContent = 'Connection Error';
+            document.getElementById('rov-status').className = 'status-indicator error';
         };
-
-        // Chain-loading pattern: load next frame after current finishes (like httpGetImage.cpp)
-        function streamVideoFeed(feedKey) {
-            const feed = VIDEO_FEEDS[feedKey];
-            
-            if (!feed.isRunning) return;
-            
-            const img = new Image();
-            const timestamp = Date.now();
-            
-            img.onload = function() {
-                feed.imgElement.src = img.src;
-                feed.statusElement.textContent = 'Connected';
-                feed.statusElement.className = 'status-indicator active';
-                feed.consecutiveErrors = 0;
-                
-                // Update FPS
-                feed.frameCount++;
-                const now = Date.now();
-                const elapsed = (now - feed.lastFpsTime) / 1000;
-                
-                if (elapsed >= 1.0) {
-                    const fps = (feed.frameCount / elapsed).toFixed(1);
-                    feed.fpsElement.textContent = `FPS: ${fps}`;
-                    feed.frameCount = 0;
-                    feed.lastFpsTime = now;
-                }
-                
-                // Request next frame immediately (no artificial delay)
-                streamVideoFeed(feedKey);
-            };
-            
-            img.onerror = function() {
-                feed.consecutiveErrors++;
-                
-                if (feed.consecutiveErrors === 1) {
-                    feed.statusElement.textContent = 'Connection Error';
-                    feed.statusElement.className = 'status-indicator error';
-                    feed.fpsElement.textContent = 'FPS: --';
-                }
-                
-                // Exponential backoff on errors
-                const retryDelay = Math.min(feed.consecutiveErrors * 100, 5000);
-                setTimeout(() => {
-                    if (feed.isRunning) {
-                        streamVideoFeed(feedKey);
-                    }
-                }, retryDelay);
-            };
-            
-            img.src = `${feed.url}?t=${timestamp}`;
-        }
-
-        function initializeVideoFeeds() {
-            VIDEO_FEEDS.rov.imgElement = document.getElementById('rov-feed');
-            VIDEO_FEEDS.rov.statusElement = document.getElementById('rov-status');
-            VIDEO_FEEDS.rov.fpsElement = document.getElementById('rov-fps');
-            
-            VIDEO_FEEDS.rovCam.imgElement = document.getElementById('rov-cam-feed');
-            VIDEO_FEEDS.rovCam.statusElement = document.getElementById('rov-cam-status');
-            VIDEO_FEEDS.rovCam.fpsElement = document.getElementById('rov-cam-fps');
-
-            Object.keys(VIDEO_FEEDS).forEach(key => {
-                VIDEO_FEEDS[key].isRunning = true;
-                streamVideoFeed(key);
-            });
-        }
-
-        window.addEventListener('beforeunload', () => {
-            Object.keys(VIDEO_FEEDS).forEach(key => {
-                VIDEO_FEEDS[key].isRunning = false;
-            });
-        });
-
-        window.addEventListener('load', initializeVideoFeeds);
+        
+        document.getElementById('rov-cam-feed').onerror = function() {
+            document.getElementById('rov-cam-status').textContent = 'Connection Error';
+            document.getElementById('rov-cam-status').className = 'status-indicator error';
+        };
 
         // --- ROS CONNECTION ---
         const ros = new ROSLIB.Ros({
