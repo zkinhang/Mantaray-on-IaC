@@ -1,11 +1,15 @@
 # Ignore build artifacts
-build/
-install/
-log/
+**/build
+**/install
+**/log
+**/.git
+**/.venv
+**/venv
 
 # Ignore archived code for demonstrations
 **/Archived_for_demo/
 
 # Ignore Python virtual environments
-.venv/
-venv/
+**/src/Archived_for_demo
+**/src/microRos
+**/src/webUI
