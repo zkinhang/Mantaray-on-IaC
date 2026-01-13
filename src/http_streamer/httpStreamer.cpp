@@ -1,22 +1,21 @@
 /**
- * This module captures video from a camera and serves it as MJPEG stream over HTTP.
+ * This module captures video from a camera and serves the image over HTTP.
  */
 
 #include <opencv2/opencv.hpp>
-#include "httplib.h"
+#include "httplib.h"   // Include cpp-httplib (https://github.com/yhirose/cpp-httplib)
 #include <thread>
 #include <mutex>
 #include <atomic>
 #include <iostream>
 #include <chrono>
-#include <condition_variable>
 
 class VideoStreaming {
 public:
-    VideoStreaming() : frame_available_(false), new_frame_(false) {
+    VideoStreaming() : frame_available_(false) {
         // Initialize camera
         bool camera_found = false;
-        int max_indices_to_check = 10;
+        int max_indices_to_check = 10; // Check up to /dev/video9
 
         for (int i = 0; i < max_indices_to_check; ++i) {
             std::string device_path = "/dev/video" + std::to_string(i);
@@ -24,7 +23,7 @@ public:
             if (cap_.isOpened()) {
                 std::cout << "Success! Camera found and opened at " << device_path << std::endl;
                 camera_found = true;
-                break;
+                break; // Exit the loop once a camera is found
             }
         }
 
@@ -32,18 +31,20 @@ public:
             throw std::runtime_error("Error: Could not find or open any working cameras.");
         }
         
-        // Set camera properties for low latency
-        cap_.set(cv::CAP_PROP_BUFFERSIZE, 1);  // Minimal buffering
-        cap_.set(cv::CAP_PROP_FPS, 30);
+        // Set camera properties for better performance
+        cap_.set(cv::CAP_PROP_BUFFERSIZE, 1);  // Minimize latency
+        cap_.set(cv::CAP_PROP_FPS, 30);        // Higher FPS for reduced latency
         cap_.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M','J','P','G'));
         
+        // Set up HTTP server
         setupRoutes();
+        
+        // Start capture thread
         capture_thread_ = std::thread(&VideoStreaming::updateFrame, this);
     }
     
     ~VideoStreaming() {
         stop_capture_ = true;
-        frame_cv_.notify_all();
         
         if (capture_thread_.joinable()) {
             capture_thread_.join();
@@ -61,56 +62,23 @@ public:
 
 private:
     void setupRoutes() {
-        // MJPEG stream endpoint with minimal latency
-        server_.Get("/stream", [this](const httplib::Request&, httplib::Response& res) {
-            res.set_header("Content-Type", "multipart/x-mixed-replace; boundary=frame");
-            res.set_header("Cache-Control", "no-cache, no-store, must-revalidate");
-            res.set_header("Pragma", "no-cache");
-            res.set_header("Expires", "0");
+        // Define route for video feed
+        server_.Get("/video_feed", [this](const httplib::Request&, httplib::Response& res) {
+            if (!frame_available_) {
+                res.status = 503; // Service Unavailable
+                res.set_content("No frame available", "text/plain");
+                return;
+            }
             
-            res.set_chunked_content_provider(
-                "multipart/x-mixed-replace; boundary=frame",
-                [this](size_t /*offset*/, httplib::DataSink &sink) {
-                    while (!stop_capture_) {
-                        std::vector<uchar> jpeg_buffer;
-                        
-                        {
-                            std::unique_lock<std::mutex> lock(buffer_mutex_);
-                            // Wait for new frame with timeout
-                            frame_cv_.wait_for(lock, std::chrono::milliseconds(100), 
-                                [this]{ return new_frame_.load() || stop_capture_.load(); });
-                            
-                            if (stop_capture_) break;
-                            
-                            if (!frame_available_ || buffer_.empty()) {
-                                continue;
-                            }
-                            
-                            jpeg_buffer = buffer_;
-                            new_frame_ = false;
-                        }
-
-                        if (!jpeg_buffer.empty()) {
-                            std::string boundary = "\r\n--frame\r\n";
-                            sink.write(boundary.c_str(), boundary.length());
-
-                            std::string header = "Content-Type: image/jpeg\r\nContent-Length: " + 
-                                               std::to_string(jpeg_buffer.size()) + "\r\n\r\n";
-                            sink.write(header.c_str(), header.length());
-                            sink.write(reinterpret_cast<const char*>(jpeg_buffer.data()), jpeg_buffer.size());
-                            sink.write("\r\n", 2);
-                        }
-                        
-                        // No artificial delay - stream frames as fast as they arrive
-                    }
-                    sink.done();
-                    return true;
-                },
-                [](bool success) {
-                    if (!success) {
-                        std::cerr << "Streaming failed!" << std::endl;
-                    }
-                });
+            std::vector<uchar> jpeg_buffer;
+            {
+                std::lock_guard<std::mutex> lock(buffer_mutex_);
+                jpeg_buffer = buffer_;
+            }
+            
+            // Fix: set content with MIME type
+            res.set_header("Content-Type", "image/jpeg");
+            res.body.assign(reinterpret_cast<char*>(jpeg_buffer.data()), jpeg_buffer.size());
         });
     }
     
@@ -132,6 +100,7 @@ private:
             auto now = std::chrono::steady_clock::now();
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - last_print_time).count();
             
+            // Print FPS and frame size every second
             if (elapsed >= 1) {
                 std::cout << "FPS: " << frame_count / elapsed 
                           << ", Frame size: " << frame.cols << "x" << frame.rows << std::endl;
@@ -139,23 +108,19 @@ private:
                 last_print_time = now;
             }
             
-            // Encode with lower quality for reduced latency
+            // Encode to JPEG with optimized quality (80% is a good balance)
             std::vector<uchar> jpeg_buffer;
-            std::vector<int> encode_params = {cv::IMWRITE_JPEG_QUALITY, 70};  // Lower quality = faster encoding
+            std::vector<int> encode_params = {cv::IMWRITE_JPEG_QUALITY, 80};
             
             if (cv::imencode(".jpg", frame, jpeg_buffer, encode_params)) {
-                {
-                    std::lock_guard<std::mutex> lock(buffer_mutex_);
-                    buffer_ = std::move(jpeg_buffer);  // Use move for efficiency
-                    frame_available_ = true;
-                    new_frame_ = true;
-                }
-                frame_cv_.notify_all();  // Wake up waiting streams
+                std::lock_guard<std::mutex> lock(buffer_mutex_);
+                buffer_ = jpeg_buffer;
+                frame_available_ = true;
             } else {
                 std::cerr << "Failed to encode frame" << std::endl;
             }
             
-            // Minimal delay
+            // Small delay to prevent excessive CPU usage
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
@@ -165,16 +130,14 @@ private:
     std::thread capture_thread_;
     std::vector<uchar> buffer_;
     std::mutex buffer_mutex_;
-    std::condition_variable frame_cv_;
     std::atomic<bool> frame_available_;
-    std::atomic<bool> new_frame_;
     std::atomic<bool> stop_capture_{false};
 };
 
 int main() {
     try {
         VideoStreaming streamer;
-        streamer.run();
+        streamer.run();  // This will block until the server is stopped
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

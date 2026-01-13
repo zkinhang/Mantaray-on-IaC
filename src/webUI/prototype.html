@@ -73,6 +73,12 @@
         .video-feed .status-indicator.error {
             color: #f00;
         }
+        .video-feed .fps-indicator {
+            text-align: center;
+            font-size: 0.8em;
+            margin-top: 5px;
+            color: #888;
+        }
     </style>
 </head>
 <body>
@@ -89,11 +95,13 @@
                 <h4>ROV Camera</h4>
                 <img id="rov-feed" src="" alt="ROV Camera Feed" style="width: 640px;">
                 <div id="rov-status" class="status-indicator">Connecting...</div>
+                <div id="rov-fps" class="fps-indicator">FPS: --</div>
             </div>
             <div class="video-feed">
                 <h4>ROV-CAM Camera</h4>
                 <img id="rov-cam-feed" src="" alt="ROV-CAM Camera Feed" style="width: 640px;">
                 <div id="rov-cam-status" class="status-indicator">Connecting...</div>
+                <div id="rov-cam-fps" class="fps-indicator">FPS: --</div>
             </div>
         </div>
     </div>
@@ -131,64 +139,110 @@
         // --- CONFIGURATION ---
         const ROBOT_IP = 'localhost'; 
         const PORT = '9090';
-        const MOVEMENT_DURATION = 10000; // 10 seconds
-        const LINEAR_SPEED = 0.5;  // Adjust as needed
-        const ANGULAR_SPEED = 0.5; // Adjust as needed
-        const VERTICAL_SPEED = 0.5; // Adjust as needed
+        const MOVEMENT_DURATION = 10000;
+        const LINEAR_SPEED = 0.5;
+        const ANGULAR_SPEED = 0.5;
+        const VERTICAL_SPEED = 0.5;
 
         let currentMovementTimer = null;
 
         // --- VIDEO FEED CONFIGURATION ---
-        // Force HTTP protocol to match the video stream servers
         const VIDEO_FEEDS = {
             rov: {
-                url: 'http://rov:30001/stream',
+                url: 'http://rov:30001/video_feed',
                 imgElement: null,
-                statusElement: null
+                statusElement: null,
+                fpsElement: null,
+                isRunning: false,
+                frameCount: 0,
+                lastFpsTime: Date.now(),
+                consecutiveErrors: 0
             },
             rovCam: {
-                url: 'http://rov-cam:30002/stream',
+                url: 'http://rov-cam:30002/video_feed',
                 imgElement: null,
-                statusElement: null
+                statusElement: null,
+                fpsElement: null,
+                isRunning: false,
+                frameCount: 0,
+                lastFpsTime: Date.now(),
+                consecutiveErrors: 0
             }
         };
 
-        // Initialize video feeds with timestamp to prevent caching
-        function initializeVideoFeeds() {
-            // Get DOM elements after page load
-            VIDEO_FEEDS.rov.imgElement = document.getElementById('rov-feed');
-            VIDEO_FEEDS.rov.statusElement = document.getElementById('rov-status');
-            VIDEO_FEEDS.rovCam.imgElement = document.getElementById('rov-cam-feed');
-            VIDEO_FEEDS.rovCam.statusElement = document.getElementById('rov-cam-status');
-
-            Object.keys(VIDEO_FEEDS).forEach(key => {
-                const feed = VIDEO_FEEDS[key];
-                const timestamp = new Date().getTime();
-                feed.imgElement.src = `${feed.url}?t=${timestamp}`;
+        // Chain-loading pattern: load next frame after current finishes (like httpGetImage.cpp)
+        function streamVideoFeed(feedKey) {
+            const feed = VIDEO_FEEDS[feedKey];
+            
+            if (!feed.isRunning) return;
+            
+            const img = new Image();
+            const timestamp = Date.now();
+            
+            img.onload = function() {
+                feed.imgElement.src = img.src;
+                feed.statusElement.textContent = 'Connected';
+                feed.statusElement.className = 'status-indicator active';
+                feed.consecutiveErrors = 0;
                 
-                // Handle successful load
-                feed.imgElement.onload = function() {
-                    feed.statusElement.textContent = 'Connected';
-                    feed.statusElement.className = 'status-indicator active';
-                };
+                // Update FPS
+                feed.frameCount++;
+                const now = Date.now();
+                const elapsed = (now - feed.lastFpsTime) / 1000;
                 
-                // Handle errors
-                feed.imgElement.onerror = function() {
+                if (elapsed >= 1.0) {
+                    const fps = (feed.frameCount / elapsed).toFixed(1);
+                    feed.fpsElement.textContent = `FPS: ${fps}`;
+                    feed.frameCount = 0;
+                    feed.lastFpsTime = now;
+                }
+                
+                // Request next frame immediately (no artificial delay)
+                streamVideoFeed(feedKey);
+            };
+            
+            img.onerror = function() {
+                feed.consecutiveErrors++;
+                
+                if (feed.consecutiveErrors === 1) {
                     feed.statusElement.textContent = 'Connection Error';
                     feed.statusElement.className = 'status-indicator error';
-                    
-                    // Retry connection after 5 seconds
-                    setTimeout(() => {
-                        feed.statusElement.textContent = 'Reconnecting...';
-                        feed.statusElement.className = 'status-indicator';
-                        const newTimestamp = new Date().getTime();
-                        feed.imgElement.src = `${feed.url}?t=${newTimestamp}`;
-                    }, 5000);
-                };
+                    feed.fpsElement.textContent = 'FPS: --';
+                }
+                
+                // Exponential backoff on errors
+                const retryDelay = Math.min(feed.consecutiveErrors * 100, 5000);
+                setTimeout(() => {
+                    if (feed.isRunning) {
+                        streamVideoFeed(feedKey);
+                    }
+                }, retryDelay);
+            };
+            
+            img.src = `${feed.url}?t=${timestamp}`;
+        }
+
+        function initializeVideoFeeds() {
+            VIDEO_FEEDS.rov.imgElement = document.getElementById('rov-feed');
+            VIDEO_FEEDS.rov.statusElement = document.getElementById('rov-status');
+            VIDEO_FEEDS.rov.fpsElement = document.getElementById('rov-fps');
+            
+            VIDEO_FEEDS.rovCam.imgElement = document.getElementById('rov-cam-feed');
+            VIDEO_FEEDS.rovCam.statusElement = document.getElementById('rov-cam-status');
+            VIDEO_FEEDS.rovCam.fpsElement = document.getElementById('rov-cam-fps');
+
+            Object.keys(VIDEO_FEEDS).forEach(key => {
+                VIDEO_FEEDS[key].isRunning = true;
+                streamVideoFeed(key);
             });
         }
 
-        // Initialize feeds on page load
+        window.addEventListener('beforeunload', () => {
+            Object.keys(VIDEO_FEEDS).forEach(key => {
+                VIDEO_FEEDS[key].isRunning = false;
+            });
+        });
+
         window.addEventListener('load', initializeVideoFeeds);
 
         // --- ROS CONNECTION ---
@@ -263,12 +317,10 @@
         }
 
         function sendMovement(direction) {
-            // Clear any existing timer
             if (currentMovementTimer) {
                 clearTimeout(currentMovementTimer);
             }
 
-            // Publish movement based on direction
             switch(direction) {
                 case 'forward':
                     publishTwist(LINEAR_SPEED, 0, 0, 0, 0, 0);
@@ -290,10 +342,9 @@
                     break;
                 case 'stop':
                     publishTwist(0, 0, 0, 0, 0, 0);
-                    return; // Don't set timer for stop
+                    return;
             }
 
-            // Stop after duration
             currentMovementTimer = setTimeout(function() {
                 publishTwist(0, 0, 0, 0, 0, 0);
                 console.log("Movement stopped after " + MOVEMENT_DURATION + "ms");
