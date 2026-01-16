@@ -1,0 +1,5 @@
+{
+  "name": "Mantaray Control Interface",
+  "description": "WebUI for Mantaray-on-IaC robotic system featuring dual camera streaming, ROS 2 power limit configuration, and PID control management.",
+  "requestFramePermissions": []
+}

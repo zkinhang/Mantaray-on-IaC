@@ -68,6 +68,7 @@ private:
             res.set_header("Cache-Control", "no-cache, no-store, must-revalidate");
             res.set_header("Pragma", "no-cache");
             res.set_header("Expires", "0");
+            res.set_header("Access-Control-Allow-Origin", "*");
             
             res.set_chunked_content_provider(
                 "multipart/x-mixed-replace; boundary=frame",
