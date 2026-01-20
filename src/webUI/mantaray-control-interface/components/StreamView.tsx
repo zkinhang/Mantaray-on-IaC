@@ -86,9 +86,9 @@ export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlCha
   const streamUrl = `${url}${url.includes('?') ? '&' : '?'}t=${timestamp}`;
 
   return (
-    <div className="flex flex-col h-full bg-k3s-block border-2 border-k3s-border hover:border-k3s-primary transition-colors duration-300">
+    <div className="flex flex-col h-full bg-k3s-block border-2 border-k3s-border hover:border-k3s-primary transition-colors duration-300 min-h-0 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-k3s-dark border-b-2 border-k3s-border">
+      <div className="flex items-center justify-between px-4 py-3 bg-k3s-dark border-b-2 border-k3s-border flex-none">
         <div className="flex items-center space-x-2">
           <Camera className="w-5 h-5 text-k3s-primary" />
           <h3 className="font-bold text-sm tracking-wide text-white uppercase">{title}</h3>
@@ -120,7 +120,7 @@ export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlCha
 
       {/* URL Config */}
       {isEditing && (
-        <div className="p-3 bg-k3s-dark border-b-2 border-k3s-border flex gap-2">
+        <div className="p-3 bg-k3s-dark border-b-2 border-k3s-border flex gap-2 flex-none">
           <input 
             type="text" 
             value={tempUrl}
@@ -138,7 +138,7 @@ export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlCha
       )}
 
       {/* Stream Area - Native MJPEG Implementation */}
-      <div className="relative flex-1 bg-black flex items-center justify-center min-h-[300px] overflow-hidden group">
+      <div className="relative flex-1 bg-black flex items-center justify-center min-h-0 overflow-hidden group">
         
         {/* Loading / Error State */}
         {(!isConnected || error) && (

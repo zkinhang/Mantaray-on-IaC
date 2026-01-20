@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Activity, Power, ShieldAlert } from 'lucide-react';
 import { MovementControl } from './MovementControl';
 import { rosService } from '../services/rosService';
@@ -12,18 +12,18 @@ export const ControlPanel: React.FC = () => {
   }, []);
 
   return (
-    <div className="bg-k3s-block border-2 border-k3s-border p-5 flex flex-col h-full shadow-2xl">
-      <div className="flex items-center space-x-3 mb-6 pb-4 border-b-2 border-k3s-border">
+    <div className="bg-k3s-block border-2 border-k3s-border p-5 flex flex-col h-full shadow-2xl min-h-0 overflow-hidden">
+      <div className="flex items-center space-x-3 mb-6 pb-4 border-b-2 border-k3s-border flex-none">
         <Activity className="w-6 h-6 text-k3s-primary" />
         <h2 className="text-xl font-bold text-white tracking-tight uppercase">Mission Control</h2>
       </div>
 
-      <div className="space-y-8 flex-1">
+      <div className="space-y-8 flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0">
         {/* Movement Module */}
         <MovementControl />
 
         {/* PID Toggle Section */}
-        <div className="space-y-4">
+        <div className="space-y-4 pb-4">
            <div className="flex items-center gap-2 text-sm font-bold text-k3s-primary uppercase tracking-wider border-b border-k3s-border pb-2">
             <ShieldAlert className="w-4 h-4" />
             <span>Systems</span>
