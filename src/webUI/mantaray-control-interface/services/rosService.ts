@@ -12,6 +12,7 @@ class RosService {
   private isConnected: boolean = false;
   private listeners: ((connected: boolean) => void)[] = [];
   private pidListeners: ((enabled: boolean) => void)[] = [];
+  private logListeners: ((log: { type: 'info' | 'warn' | 'error' | 'success', message: string, timestamp: string }) => void)[] = [];
   
   // Topics
   private cmdVelTopic: any = null;
@@ -38,7 +39,7 @@ class RosService {
     // Use mantaray.local as default target, unless we are serving FROM the robot, then use that hostname.
     const targetHost = (window.location.hostname.includes('mantaray') || window.location.hostname.includes('rov')) 
       ? window.location.hostname 
-      : 'mantaray.local';
+      : '100.124.132.15';
     
     // Note: Standard ROS bridge usually runs on 9090
     const PORT = '9090';
@@ -49,6 +50,7 @@ class RosService {
     const url = `${protocol}://${targetHost}:${PORT}`;
 
     console.log(`[ROS] Attempting connection to: ${url}`);
+    this.addLog('info', `Initializing ROS Bridge Link: ${url}`);
 
     try {
       this.ros = new window.ROSLIB.Ros({ url });
@@ -56,6 +58,7 @@ class RosService {
       this.ros.on('connection', () => {
         console.log('[ROS] Connected to websocket server.');
         this.isConnected = true;
+        this.addLog('success', `Link established: ${url}`);
         this.setupTopics();
         this.notifyStatusListeners();
         if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
@@ -63,10 +66,11 @@ class RosService {
 
       this.ros.on('error', (error: any) => {
         console.log('[ROS] Connection error:', error);
+        this.addLog('error', `Connection error: Check ROS Bridge @ ${targetHost}`);
         
         // Specific help for Mixed Content Error
         if (window.location.protocol === 'https:' && protocol === 'wss') {
-           console.warn("[ROS] You are on HTTPS, so WSS was attempted. If your robot does not support SSL (WSS), this connection will fail. Please serve this web app over HTTP.");
+           this.addLog('warn', "HTTPS detected. Using WSS protocol.");
         }
         
         this.isConnected = false;
@@ -75,6 +79,7 @@ class RosService {
 
       this.ros.on('close', () => {
         console.log('[ROS] Connection closed.');
+        this.addLog('warn', "Link terminated: Reconnect sequence initiated.");
         this.isConnected = false;
         this.notifyStatusListeners();
         
@@ -146,6 +151,22 @@ class RosService {
     this.pidListeners.forEach(l => l(enabled));
   }
 
+  public addLog(type: 'info' | 'warn' | 'error' | 'success', message: string) {
+    const log = {
+      type,
+      message,
+      timestamp: new Date().toLocaleTimeString()
+    };
+    this.logListeners.forEach(l => l(log));
+  }
+
+  public subscribeLogs(callback: (log: { type: 'info' | 'warn' | 'error' | 'success', message: string, timestamp: string }) => void) {
+    this.logListeners.push(callback);
+    return () => {
+      this.logListeners = this.logListeners.filter(l => l !== callback);
+    };
+  }
+
   public publishTwist(twist: TwistMessage) {
     if (!this.isConnected || !this.cmdVelTopic) return;
     
@@ -155,7 +176,10 @@ class RosService {
     });
     
     this.cmdVelTopic.publish(message);
-    // console.log("[ROS] Published Twist"); // Reduced log spam
+    const dir = twist.linear.x > 0 ? "FORWARD" : twist.linear.x < 0 ? "BACKWARD" : 
+                twist.angular.z > 0 ? "LEFT" : twist.angular.z < 0 ? "RIGHT" : 
+                twist.linear.z > 0 ? "ASCEND" : twist.linear.z < 0 ? "DESCEND" : "STOP";
+    this.addLog('info', `TOPIC [/cmd_vel]: CMD=${dir}`);
   }
 
   public publishPidToggle(value: boolean) {
@@ -166,7 +190,7 @@ class RosService {
     });
     
     this.pidTogglePub.publish(message);
-    console.log(`[ROS] Published PidToggle: ${value}`);
+    this.addLog('info', `TOPIC [/pid/toggle]: STATE=${value ? 'ENABLED' : 'DISABLED'}`);
   }
 }
 

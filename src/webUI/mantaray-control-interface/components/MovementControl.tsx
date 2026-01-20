@@ -63,16 +63,53 @@ export const MovementControl: React.FC = () => {
   };
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'w':
+        case 'arrowup':
+          handleMove('forward');
+          break;
+        case 's':
+        case 'arrowdown':
+          handleMove('backward');
+          break;
+        case 'a':
+        case 'arrowleft':
+          handleMove('left');
+          break;
+        case 'd':
+        case 'arrowright':
+          handleMove('right');
+          break;
+        case 'q':
+          handleMove('up');
+          break;
+        case 'e':
+          handleMove('down');
+          break;
+        case 'x':
+        case ' ':
+          e.preventDefault(); // Prevent spacebar scroll
+          handleMove('stop');
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
+      window.removeEventListener('keydown', handleKeyDown);
       if (timerRef.current) clearTimeout(timerRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
   }, []);
 
-  const ControlBtn = ({ dir, icon: Icon, title, className = "" }: { dir: Direction, icon: any, title: string, className?: string }) => (
+  const ControlBtn = ({ dir, icon: Icon, title, hint, className = "" }: { dir: Direction, icon: any, title: string, hint?: string, className?: string }) => (
     <button
       onClick={() => handleMove(dir)}
-      className={`w-full aspect-square flex items-center justify-center border-2 border-k3s-border transition-all font-bold uppercase text-xs ${
+      className={`w-full aspect-square flex flex-col items-center justify-center border-2 border-k3s-border transition-all font-bold uppercase text-xs relative ${
         activeDirection === dir 
           ? 'bg-k3s-primary text-black border-k3s-primary scale-95' 
           : 'bg-k3s-dark text-white hover:border-k3s-primary'
@@ -80,6 +117,11 @@ export const MovementControl: React.FC = () => {
       title={title}
     >
       <Icon className="w-8 h-8" />
+      {hint && (
+        <span className={`absolute bottom-1 right-1 text-[8px] font-mono opacity-60 ${activeDirection === dir ? 'text-black' : 'text-k3s-primary'}`}>
+          [{hint}]
+        </span>
+      )}
     </button>
   );
 
@@ -96,34 +138,36 @@ export const MovementControl: React.FC = () => {
 
       <div className="grid grid-cols-3 gap-2 max-w-[300px] mx-auto">
         <div className="empty" />
-        <ControlBtn dir="forward" icon={ChevronUp} title="Forward" />
+        <ControlBtn dir="forward" icon={ChevronUp} title="Forward" hint="W" />
         <div className="empty" />
 
-        <ControlBtn dir="left" icon={RotateCcw} title="Rotate Left" />
-        <ControlBtn dir="stop" icon={Square} title="STOP" className="!bg-red-600/20 !text-red-500 !border-red-500 hover:!bg-red-600 hover:!text-white" />
-        <ControlBtn dir="right" icon={RotateCw} title="Rotate Right" />
+        <ControlBtn dir="left" icon={RotateCcw} title="Rotate Left" hint="A" />
+        <ControlBtn dir="stop" icon={Square} title="STOP" hint="SPC" className="!bg-red-600/20 !text-red-500 !border-red-500 hover:!bg-red-600 hover:!text-white" />
+        <ControlBtn dir="right" icon={RotateCw} title="Rotate Right" hint="D" />
 
         <div className="empty" />
-        <ControlBtn dir="backward" icon={ChevronDown} title="Backward" />
+        <ControlBtn dir="backward" icon={ChevronDown} title="Backward" hint="S" />
         <div className="empty" />
       </div>
 
       <div className="grid grid-cols-2 gap-2 mt-4">
         <button
           onClick={() => handleMove('up')}
-          className={`flex items-center justify-center gap-2 py-3 border-2 border-k3s-border transition-all font-bold uppercase text-xs ${
+          className={`flex items-center justify-center gap-2 py-3 border-2 border-k3s-border transition-all font-bold uppercase text-xs relative ${
             activeDirection === 'up' ? 'bg-k3s-primary text-black border-k3s-primary' : 'bg-k3s-dark text-white hover:border-k3s-primary'
           }`}
         >
           <ArrowUp className="w-4 h-4" /> UP
+          <span className={`absolute bottom-0 right-1 text-[8px] font-mono opacity-60 ${activeDirection === 'up' ? 'text-black' : 'text-k3s-primary'}`}>[Q]</span>
         </button>
         <button
           onClick={() => handleMove('down')}
-          className={`flex items-center justify-center gap-2 py-3 border-2 border-k3s-border transition-all font-bold uppercase text-xs ${
+          className={`flex items-center justify-center gap-2 py-3 border-2 border-k3s-border transition-all font-bold uppercase text-xs relative ${
             activeDirection === 'down' ? 'bg-k3s-primary text-black border-k3s-primary' : 'bg-k3s-dark text-white hover:border-k3s-primary'
           }`}
         >
           <ArrowDown className="w-4 h-4" /> DOWN
+          <span className={`absolute bottom-0 right-1 text-[8px] font-mono opacity-60 ${activeDirection === 'down' ? 'text-black' : 'text-k3s-primary'}`}>[E]</span>
         </button>
       </div>
     </div>

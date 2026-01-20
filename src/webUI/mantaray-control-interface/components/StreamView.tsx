@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Camera, Download, RefreshCw, AlertCircle, Activity } from 'lucide-react';
+import { rosService } from '../services/rosService';
 
 interface StreamViewProps {
   id: string;
@@ -54,11 +55,17 @@ export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlCha
   };
 
   const handleImageLoad = () => {
+    if (!isConnected) {
+      rosService.addLog('success', `STREAM [${title}]: Link established`);
+    }
     setIsConnected(true);
     setError(false);
   };
 
   const handleImageError = () => {
+    if (isConnected || !error) {
+      rosService.addLog('error', `STREAM [${title}]: Link failure. Retrying...`);
+    }
     setIsConnected(false);
     setError(true);
     
