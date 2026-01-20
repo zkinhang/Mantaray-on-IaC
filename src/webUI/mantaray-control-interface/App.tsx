@@ -49,8 +49,8 @@ const App: React.FC = () => {
     <div className="h-screen bg-k3s-dark text-k3s-text font-sans selection:bg-k3s-primary selection:text-black flex flex-col overflow-hidden">
       <Header />
       
-      <main className="flex-1 p-4 md:p-6 max-w-[1920px] mx-auto w-full overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+      <main className="flex-1 p-2 md:p-4 max-w-[1920px] mx-auto w-full overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
           
           {/* Horizontal Video Feeds Section */}
           <div className="lg:col-span-9 flex flex-col gap-4 min-h-0">

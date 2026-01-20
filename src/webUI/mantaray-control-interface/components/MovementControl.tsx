@@ -116,7 +116,7 @@ export const MovementControl: React.FC = () => {
       } ${className}`}
       title={title}
     >
-      <Icon className="w-8 h-8" />
+      <Icon className="w-7 h-7" />
       {hint && (
         <span className={`absolute bottom-1 right-1 text-[8px] font-mono opacity-60 ${activeDirection === dir ? 'text-black' : 'text-k3s-primary'}`}>
           [{hint}]
@@ -126,8 +126,8 @@ export const MovementControl: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-k3s-border pb-2">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between border-b border-k3s-border pb-1">
         <span className="text-xs font-bold text-k3s-primary uppercase tracking-widest">Navigation Unit</span>
         {timeLeft > 0 && (
           <span className="text-[10px] font-mono bg-k3s-primary text-black px-2 py-0.5 animate-pulse">
@@ -136,7 +136,7 @@ export const MovementControl: React.FC = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 max-w-[300px] mx-auto">
+      <div className="grid grid-cols-3 gap-2 max-w-[240px] mx-auto">
         <div className="empty" />
         <ControlBtn dir="forward" icon={ChevronUp} title="Forward" hint="W" />
         <div className="empty" />
@@ -158,7 +158,7 @@ export const MovementControl: React.FC = () => {
           }`}
         >
           <ArrowUp className="w-4 h-4" /> UP
-          <span className={`absolute bottom-0 right-1 text-[8px] font-mono opacity-60 ${activeDirection === 'up' ? 'text-black' : 'text-k3s-primary'}`}>[Q]</span>
+          <span className={`absolute bottom-0.5 right-1 text-[8px] font-mono opacity-60 ${activeDirection === 'up' ? 'text-black' : 'text-k3s-primary'}`}>[Q]</span>
         </button>
         <button
           onClick={() => handleMove('down')}
@@ -167,7 +167,7 @@ export const MovementControl: React.FC = () => {
           }`}
         >
           <ArrowDown className="w-4 h-4" /> DOWN
-          <span className={`absolute bottom-0 right-1 text-[8px] font-mono opacity-60 ${activeDirection === 'down' ? 'text-black' : 'text-k3s-primary'}`}>[E]</span>
+          <span className={`absolute bottom-0.5 right-1 text-[8px] font-mono opacity-60 ${activeDirection === 'down' ? 'text-black' : 'text-k3s-primary'}`}>[E]</span>
         </button>
       </div>
     </div>

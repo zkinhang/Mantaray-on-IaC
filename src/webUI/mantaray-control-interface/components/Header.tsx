@@ -11,14 +11,14 @@ export const Header: React.FC = () => {
   }, []);
 
   return (
-    <header className="h-20 bg-k3s-block border-b-2 border-k3s-primary flex items-center justify-between px-6 sticky top-0 z-50 shadow-lg">
+    <header className="h-16 bg-k3s-block border-b-2 border-k3s-primary flex items-center justify-between px-6 sticky top-0 z-50 shadow-lg">
       <div className="flex items-center space-x-4">
-        <div className="bg-k3s-primary p-2.5 shadow-lg">
-          <Anchor className="w-8 h-8 text-black" />
+        <div className="bg-k3s-primary p-2 shadow-lg">
+          <Anchor className="w-6 h-6 text-black" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white leading-none tracking-tight">Mantaray<span className="text-k3s-primary">.IaC</span></h1>
-          <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold mt-1">Robotic Infrastructure Control</p>
+          <h1 className="text-xl font-bold text-white leading-none tracking-tight">Mantaray<span className="text-k3s-primary">.IaC</span></h1>
+          <p className="text-[8px] text-gray-400 uppercase tracking-[0.2em] font-bold mt-1">Robotic Infrastructure Control</p>
         </div>
       </div>
 
