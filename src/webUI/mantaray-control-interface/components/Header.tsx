@@ -1,8 +1,8 @@
-﻿import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef, memo } from 'react';
 import { Wifi, WifiOff, Server, Anchor, ChevronDown, History } from 'lucide-react';
 import { rosService } from '../services/rosService';
 
-export const Header: React.FC = () => {
+export const Header: React.FC = memo(() => {
   const [isConnected, setIsConnected] = useState(false);
   const [targetHost, setTargetHost] = useState(rosService.getTargetHost());
   const [recentHosts, setRecentHosts] = useState(rosService.getRecentHosts());
@@ -66,7 +66,7 @@ export const Header: React.FC = () => {
                 className="bg-transparent text-xs font-mono text-white outline-none w-32"
                 placeholder="127.0.0.1"
               />
-              {recentHosts.length > 0 && (
+              {recentHosts.length > 0 ? (
                 <button 
                   type="button"
                   onClick={() => setShowDropdown(!showDropdown)}
@@ -74,10 +74,10 @@ export const Header: React.FC = () => {
                 >
                   <ChevronDown className={`w-3 h-3 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
                 </button>
-              )}
+              ) : null}
 
               {/* Dropdown Menu */}
-              {showDropdown && recentHosts.length > 0 && (
+              {showDropdown && recentHosts.length > 0 ? (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-k3s-block border-2 border-k3s-primary z-[100] shadow-2xl animate-in fade-in slide-in-from-top-2">
                   <div className="p-2 border-b border-k3s-border flex items-center">
                     <History className="w-3 h-3 text-k3s-muted mr-1.5" />
@@ -91,12 +91,12 @@ export const Header: React.FC = () => {
                         className="w-full text-left px-3 py-2 text-xs font-mono hover:bg-k3s-primary hover:text-black transition-colors flex items-center justify-between group"
                       >
                         <span>{host}</span>
-                        {host === targetHost && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+                        {host === targetHost ? <div className="w-1.5 h-1.5 rounded-full bg-green-500" /> : null}
                       </button>
                     ))}
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
             <button 
               type="submit"
@@ -120,4 +120,4 @@ export const Header: React.FC = () => {
       </div>
     </header>
   );
-};
+});

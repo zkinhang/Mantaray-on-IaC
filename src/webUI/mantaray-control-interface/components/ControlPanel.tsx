@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, memo } from 'react';
 import { Activity, Power, ShieldAlert } from 'lucide-react';
 import { MovementControl } from './MovementControl';
 import { rosService } from '../services/rosService';
 
-export const ControlPanel: React.FC = () => {
+export const ControlPanel: React.FC = memo(() => {
   const [pidOn, setPidOn] = useState(true);
 
   useEffect(() => {
@@ -48,4 +48,4 @@ export const ControlPanel: React.FC = () => {
       
     </div>
   );
-};
+});

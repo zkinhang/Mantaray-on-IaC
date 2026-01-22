@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
 import { Camera, Download, RefreshCw, AlertCircle, Activity } from 'lucide-react';
 import { rosService } from '../services/rosService';
 
@@ -9,7 +9,7 @@ interface StreamViewProps {
   onUrlChange: (id: string, newUrl: string) => void;
 }
 
-export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlChange }) => {
+export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onUrlChange }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempUrl, setTempUrl] = useState(url);
   const [error, setError] = useState(false);
@@ -25,7 +25,7 @@ export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlCha
     setError(false);
   }, [url]);
 
-  const handleSnapshot = () => {
+  const handleSnapshot = useCallback(() => {
     if (!imgRef.current) return;
     try {
       const canvas = document.createElement('canvas');
@@ -46,23 +46,23 @@ export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlCha
       console.error("Snapshot failed:", e);
       alert("Snapshot failed. CORS headers required.");
     }
-  };
+  }, [id]);
 
-  const handleSaveUrl = () => {
+  const handleSaveUrl = useCallback(() => {
     onUrlChange(id, tempUrl);
     setIsEditing(false);
     setError(false);
-  };
+  }, [id, onUrlChange, tempUrl]);
 
-  const handleImageLoad = () => {
+  const handleImageLoad = useCallback(() => {
     if (!isConnected) {
       rosService.addLog('success', `STREAM [${title}]: Link established`);
     }
     setIsConnected(true);
     setError(false);
-  };
+  }, [isConnected, title]);
 
-  const handleImageError = () => {
+  const handleImageError = useCallback(() => {
     if (isConnected || !error) {
       rosService.addLog('error', `STREAM [${title}]: Link failure. Retrying...`);
     }
@@ -73,13 +73,13 @@ export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlCha
     setTimeout(() => {
       setTimestamp(Date.now());
     }, 2000);
-  };
+  }, [isConnected, error, title]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     setTimestamp(Date.now());
     setIsConnected(false);
     setError(false);
-  };
+  }, []);
 
   // Construct stream URL with timestamp to prevent caching and force reconnects
   // Check if URL already has params to decide between ? and &
@@ -119,7 +119,7 @@ export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlCha
       </div>
 
       {/* URL Config */}
-      {isEditing && (
+      {isEditing ? (
         <div className="p-3 bg-k3s-dark border-b-2 border-k3s-border flex gap-2 flex-none">
           <input 
             type="text" 
@@ -135,13 +135,13 @@ export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlCha
             Set Source
           </button>
         </div>
-      )}
+      ) : null}
 
       {/* Stream Area - Native MJPEG Implementation */}
       <div className="relative flex-1 bg-black flex items-center justify-center min-h-0 overflow-hidden group">
         
         {/* Loading / Error State */}
-        {(!isConnected || error) && (
+        {(!isConnected || error) ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 space-y-3 bg-black z-10">
             {error ? (
               <>
@@ -156,7 +156,7 @@ export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlCha
               </>
             )}
           </div>
-        )}
+        ) : null}
 
         {/* 
           Native MJPEG Stream 
@@ -174,14 +174,14 @@ export const StreamView: React.FC<StreamViewProps> = ({ id, title, url, onUrlCha
         
         {/* Overlay Info */}
         <div className="absolute top-3 right-3 flex flex-col items-end space-y-1 z-20">
-          {isConnected && (
+          {isConnected ? (
             <div className="flex items-center space-x-2 px-2 py-1 bg-k3s-dark/90 border border-green-500/50">
                 <span className="w-2 h-2 bg-green-500 animate-pulse"></span>
                 <span className="text-[10px] font-bold text-green-400 tracking-wider">LIVE</span>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
   );
-};
+});

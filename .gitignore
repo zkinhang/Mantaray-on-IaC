@@ -34,6 +34,8 @@ __pycache__/
 # IDE settings
 **/.vscode/
 **/.github
+**/.agent*
+**/.cursor
 
 *.env
 

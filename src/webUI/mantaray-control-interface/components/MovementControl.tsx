@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronUp, ChevronDown, RotateCcw, RotateCw, Square, ArrowUp, ArrowDown } from 'lucide-react';
 import { Direction, TwistMessage } from '../types';
 import { rosService } from '../services/rosService';
@@ -14,7 +14,7 @@ export const MovementControl: React.FC = () => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const stopMovement = () => {
+  const stopMovement = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (countdownRef.current) clearInterval(countdownRef.current);
     
@@ -25,9 +25,9 @@ export const MovementControl: React.FC = () => {
     
     setActiveDirection(null);
     setTimeLeft(0);
-  };
+  }, []);
 
-  const handleMove = (direction: Direction) => {
+  const handleMove = useCallback((direction: Direction) => {
     stopMovement();
     
     if (direction === 'stop') return;
@@ -60,7 +60,7 @@ export const MovementControl: React.FC = () => {
     countdownRef.current = setInterval(() => {
       setTimeLeft(prev => Math.max(0, prev - 1));
     }, 1000);
-  };
+  }, [stopMovement]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -104,7 +104,7 @@ export const MovementControl: React.FC = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
-  }, []);
+  }, [handleMove]);
 
   const ControlBtn = ({ dir, icon: Icon, title, hint, className = "" }: { dir: Direction, icon: any, title: string, hint?: string, className?: string }) => (
     <button
@@ -117,11 +117,11 @@ export const MovementControl: React.FC = () => {
       title={title}
     >
       <Icon className="w-7 h-7" />
-      {hint && (
+      {hint ? (
         <span className={`absolute bottom-1 right-1 text-[8px] font-mono opacity-60 ${activeDirection === dir ? 'text-black' : 'text-k3s-primary'}`}>
           [{hint}]
         </span>
-      )}
+      ) : null}
     </button>
   );
 
@@ -129,11 +129,11 @@ export const MovementControl: React.FC = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between border-b border-k3s-border pb-1">
         <span className="text-xs font-bold text-k3s-primary uppercase tracking-widest">Navigation Unit</span>
-        {timeLeft > 0 && (
+        {timeLeft > 0 ? (
           <span className="text-[10px] font-mono bg-k3s-primary text-black px-2 py-0.5 animate-pulse">
             T-{timeLeft}s
           </span>
-        )}
+        ) : null}
       </div>
 
       <div className="grid grid-cols-3 gap-2 max-w-[240px] mx-auto">
