@@ -10,6 +10,12 @@ declare global {
 class RosService {
   private ros: any = null;
   private isConnected: boolean = false;
+  private targetHost: string = localStorage.getItem('ros_target_host') || 
+    ((window.location.hostname.includes('mantaray') || window.location.hostname.includes('rov')) 
+    ? window.location.hostname 
+    : '100.124.132.15');
+  private recentHosts: string[] = JSON.parse(localStorage.getItem('ros_recent_hosts') || '[]');
+
   private listeners: ((connected: boolean) => void)[] = [];
   private pidListeners: ((enabled: boolean) => void)[] = [];
   private logListeners: ((log: { type: 'info' | 'warn' | 'error' | 'success', message: string, timestamp: string }) => void)[] = [];
@@ -25,6 +31,51 @@ class RosService {
     this.connect();
   }
 
+  public getTargetHost(): string {
+    return this.targetHost;
+  }
+
+  public getRecentHosts(): string[] {
+    return this.recentHosts;
+  }
+
+  public updateTargetHost(host: string) {
+    if (!host) return;
+
+    console.log(`[ROS] Updating target host to: ${host}`);
+    this.targetHost = host;
+    localStorage.setItem('ros_target_host', host);
+
+    // Update recent hosts list
+    const updatedRecents = [host, ...this.recentHosts.filter(h => h !== host)].slice(0, 5);
+    this.recentHosts = updatedRecents;
+    localStorage.setItem('ros_recent_hosts', JSON.stringify(updatedRecents));
+    
+    // Clear any existing reconnect timers
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    if (this.ros) {
+      try {
+        // Remove listeners to prevent the 'close' event from triggering a 5s reconnect
+        this.ros.removeAllListeners();
+        this.ros.close();
+      } catch (e) {
+        console.error("[ROS] Error closing previous connection:", e);
+      }
+      this.ros = null;
+    }
+    
+    this.isConnected = false;
+    this.notifyStatusListeners();
+    this.addLog('info', `Target host updated to ${host}. Reconnecting...`);
+    
+    // Immediate reconnect
+    this.connect();
+  }
+
   private connect() {
     // 1. Check for ROSLIB
     if (!window.ROSLIB) {
@@ -33,13 +84,8 @@ class RosService {
       return;
     }
 
-    // 2. Determine Connection Details
-    // If running on the robot (local domain), use hostname. Otherwise default to mantaray.local.
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    // Use mantaray.local as default target, unless we are serving FROM the robot, then use that hostname.
-    const targetHost = (window.location.hostname.includes('mantaray') || window.location.hostname.includes('rov')) 
-      ? window.location.hostname 
-      : '100.124.132.15';
+    // 2. Connection Details
+    const targetHost = this.targetHost;
     
     // Note: Standard ROS bridge usually runs on 9090
     const PORT = '9090';
