@@ -2,38 +2,84 @@ import React, { useState, useEffect, useRef, memo } from 'react';
 import { Play, Pause, RotateCcw, Clock, Timer } from 'lucide-react';
 
 export const CountdownTimer: React.FC = memo(() => {
-  const [timeLeft, setTimeLeft] = useState<number>(0);
-  const [isActive, setIsActive] = useState<boolean>(false);
-  const [inputMinutes, setInputMinutes] = useState<string>("5");
+  const [timeLeft, setTimeLeft] = useState<number>(() => {
+    const savedTime = localStorage.getItem('mantaray_timer_timeLeft');
+    const savedActive = localStorage.getItem('mantaray_timer_isActive') === 'true';
+    const lastUpdate = localStorage.getItem('mantaray_timer_lastUpdate');
+    
+    if (savedTime && savedActive && lastUpdate) {
+      const elapsed = Math.floor((Date.now() - parseInt(lastUpdate)) / 1000);
+      return Math.max(0, parseInt(savedTime) - elapsed);
+    }
+    return savedTime ? parseInt(savedTime) : 0;
+  });
+
+  const [isActive, setIsActive] = useState<boolean>(() => {
+    const savedActive = localStorage.getItem('mantaray_timer_isActive') === 'true';
+    const savedTime = localStorage.getItem('mantaray_timer_timeLeft');
+    // Don't resume if time already ran out during refresh
+    if (savedActive && savedTime) {
+      const lastUpdate = localStorage.getItem('mantaray_timer_lastUpdate');
+      const elapsed = Math.floor((Date.now() - parseInt(lastUpdate || "0")) / 1000);
+      return parseInt(savedTime) - elapsed > 0;
+    }
+    return false;
+  });
+
+  const [inputMinutes, setInputMinutes] = useState<string>(() => 
+    localStorage.getItem('mantaray_timer_inputMinutes') || "5"
+  );
+  
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Optimized Persistence: Save ONLY when state changes, not recurring every second.
+  // This ensures zero disk I/O during active countdown.
+  const saveState = (time: number, active: boolean, mins?: string) => {
+    localStorage.setItem('mantaray_timer_timeLeft', time.toString());
+    localStorage.setItem('mantaray_timer_isActive', active.toString());
+    localStorage.setItem('mantaray_timer_lastUpdate', Date.now().toString());
+    if (mins) localStorage.setItem('mantaray_timer_inputMinutes', mins);
+  };
 
   useEffect(() => {
     if (isActive && timeLeft > 0) {
       timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+        setTimeLeft((prev) => {
+          const next = prev - 1;
+          if (next <= 0) {
+            setIsActive(false);
+            saveState(0, false);
+            return 0;
+          }
+          return next;
+        });
       }, 1000);
-    } else if (timeLeft === 0 && isActive) {
-      setIsActive(false);
-      if (timerRef.current) clearInterval(timerRef.current);
     }
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isActive, timeLeft]);
+  }, [isActive]); // Only re-run when isActive changes, not timeLeft
 
   const toggleTimer = () => {
+    let newTime = timeLeft;
+    let newActive = !isActive;
+
     if (!isActive && timeLeft === 0) {
       const mins = parseInt(inputMinutes) || 0;
       if (mins > 0) {
-        setTimeLeft(mins * 60);
+        newTime = mins * 60;
+        newActive = true;
+        setTimeLeft(newTime);
         setIsActive(true);
         setIsEditing(false);
       }
     } else {
-      setIsActive(!isActive);
+      setIsActive(newActive);
     }
+    
+    saveState(newTime, newActive);
   };
 
   const resetTimer = () => {
@@ -41,6 +87,7 @@ export const CountdownTimer: React.FC = memo(() => {
     setTimeLeft(0);
     setIsEditing(false);
     if (timerRef.current) clearInterval(timerRef.current);
+    saveState(0, false);
   };
 
   const formatTime = (seconds: number) => {
@@ -70,7 +117,10 @@ export const CountdownTimer: React.FC = memo(() => {
               autoFocus
               type="number" 
               value={inputMinutes}
-              onChange={(e) => setInputMinutes(e.target.value)}
+              onChange={(e) => {
+                setInputMinutes(e.target.value);
+                localStorage.setItem('mantaray_timer_inputMinutes', e.target.value);
+              }}
               onBlur={() => { if (!isActive) setIsEditing(false); }}
               onKeyDown={(e) => { if(e.key === 'Enter') toggleTimer(); if(e.key === 'Escape') setIsEditing(false); }}
               className="w-16 bg-k3s-block border border-k3s-primary text-white text-xs py-1 px-1 focus:outline-none font-mono text-center"
