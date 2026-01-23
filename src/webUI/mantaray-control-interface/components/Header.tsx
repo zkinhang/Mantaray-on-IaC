@@ -1,8 +1,12 @@
 ﻿import React, { useEffect, useState, useRef, memo } from 'react';
-import { Wifi, WifiOff, Server, Anchor, ChevronDown, History } from 'lucide-react';
+import { Wifi, WifiOff, Server, ChevronDown, History, Menu, X } from 'lucide-react';
 import { rosService } from '../services/rosService';
 
-export const Header: React.FC = memo(() => {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = memo(({ onMenuClick }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [targetHost, setTargetHost] = useState(rosService.getTargetHost());
   const [recentHosts, setRecentHosts] = useState(rosService.getRecentHosts());
@@ -42,13 +46,24 @@ export const Header: React.FC = memo(() => {
 
   return (
     <header className="h-16 bg-k3s-block border-b-2 border-k3s-primary flex items-center justify-between px-6 sticky top-0 z-50 shadow-lg">
-      <div className="flex items-center space-x-4">
-        <div className="bg-k3s-primary p-2 shadow-lg">
-          <Anchor className="w-6 h-6 text-black" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-white leading-none tracking-tight">Mantaray<span className="text-k3s-primary">.IaC</span></h1>
-          <p className="text-[8px] text-gray-400 uppercase tracking-[0.2em] font-bold mt-1">Robotic Infrastructure Control</p>
+      <div className="flex items-center space-x-3">
+        {onMenuClick && (
+          <button 
+            onClick={onMenuClick}
+            className="p-2 -ml-2 hover:bg-k3s-dark rounded-md text-k3s-muted hover:text-k3s-primary transition-all duration-200 flex items-center justify-center"
+            title="Menu"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        )}
+        <div className="flex items-center">
+          <div className="p-1">
+            <img src="/mantaray.png" alt="Mantaray Logo" className="w-10 h-10 object-contain" />
+          </div>
+          <div className="ml-3">
+            <h1 className="text-xl font-bold text-white leading-none tracking-tight">Mantaray<span className="text-k3s-primary">.IaC</span></h1>
+            <p className="text-[8px] text-gray-400 uppercase tracking-[0.2em] font-bold mt-1">Robotic Infrastructure Control</p>
+          </div>
         </div>
       </div>
 
