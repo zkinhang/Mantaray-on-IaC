@@ -16,6 +16,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
       <Header 
         onMenuClick={() => setIsNavOpen(true)} 
         onLogoClick={() => onPageChange('landing')} 
+        currentPage={currentPage}
       />
       
       <div className="flex flex-1 overflow-hidden relative">

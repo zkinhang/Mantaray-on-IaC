@@ -1,18 +1,27 @@
 ﻿import React, { useState, useRef, memo } from 'react';
-import { Wifi, WifiOff, Server, ChevronDown, History, Menu, X } from 'lucide-react';
+import { Wifi, WifiOff, Server, ChevronDown, History, Menu, X, Bookmark, BookmarkCheck } from 'lucide-react';
 import { useRos } from '../context/RosContext';
 import { CountdownTimer } from './CountdownTimer';
 
 interface HeaderProps {
   onMenuClick?: () => void;
   onLogoClick?: () => void;
+  currentPage: string;
 }
 
-export const Header: React.FC<HeaderProps> = memo(({ onMenuClick, onLogoClick }) => {
+export const Header: React.FC<HeaderProps> = memo(({ onMenuClick, onLogoClick, currentPage }) => {
   const { isConnected, targetHost: activeHost, recentHosts, updateTargetHost } = useRos();
   const [targetHost, setTargetHost] = useState(activeHost);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const [defaultPage, setDefaultPage] = useState(() => localStorage.getItem('mantaray_default_page') || 'landing');
+  const isCurrentlyDefault = defaultPage === currentPage;
+
+  const setAsDefault = () => {
+    localStorage.setItem('mantaray_default_page', currentPage);
+    setDefaultPage(currentPage);
+  };
 
   const handleHostUpdate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +63,22 @@ export const Header: React.FC<HeaderProps> = memo(({ onMenuClick, onLogoClick })
       </div>
 
       <div className="flex items-center space-x-6">
+        {/* Startup Pin */}
+        <button
+          onClick={setAsDefault}
+          className={`group flex items-center space-x-2 px-3 py-1.5 border transition-all active:scale-95 ${
+            isCurrentlyDefault 
+              ? 'border-k3s-primary bg-k3s-primary/10 text-k3s-primary' 
+              : 'border-k3s-border text-k3s-muted hover:border-gray-500 hover:text-white'
+          }`}
+          title={isCurrentlyDefault ? "Set as your startup page" : "Initialize this module on startup"}
+        >
+          {isCurrentlyDefault ? <BookmarkCheck className="w-3.5 h-3.5 fill-current" /> : <Bookmark className="w-3.5 h-3.5" />}
+          <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">
+            {isCurrentlyDefault ? "Default Module" : "Set Default"}
+          </span>
+        </button>
+
         {/* Missions Countdown Timer */}
         <div className="hidden md:block">
           <CountdownTimer />

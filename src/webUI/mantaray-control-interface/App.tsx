@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -7,9 +7,16 @@ import { SettingsPage } from './pages/SettingsPage';
 import { useStreams } from './hooks/useStreams';
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState('landing');
+  const [currentPage, setCurrentPage] = useState(() => {
+    return localStorage.getItem('mantaray_default_page') || 'landing';
+  });
   const { streams, handleUrlChange } = useStreams();
 
+  useEffect(() => {
+    // If we are on landing page and there's a default set that isn't landing,
+    // we should have already caught it in initialization.
+    // This effect can be used for deep linking if needed later.
+  }, []);
   const renderContent = () => {
     switch (currentPage) {
       case 'landing':
