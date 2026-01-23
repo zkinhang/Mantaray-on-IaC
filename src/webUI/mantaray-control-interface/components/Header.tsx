@@ -1,6 +1,7 @@
 ﻿import React, { useState, useRef, memo } from 'react';
 import { Wifi, WifiOff, Server, ChevronDown, History, Menu, X } from 'lucide-react';
 import { useRos } from '../context/RosContext';
+import { CountdownTimer } from './CountdownTimer';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -53,6 +54,11 @@ export const Header: React.FC<HeaderProps> = memo(({ onMenuClick, onLogoClick })
       </div>
 
       <div className="flex items-center space-x-6">
+        {/* Missions Countdown Timer */}
+        <div className="hidden md:block">
+          <CountdownTimer />
+        </div>
+
         <div className="hidden lg:flex items-center space-x-2 relative" ref={dropdownRef}>
           <form onSubmit={handleHostUpdate} className="flex items-center space-x-2">
             <div className="flex items-center bg-k3s-dark border border-k3s-border px-3 py-1 relative">

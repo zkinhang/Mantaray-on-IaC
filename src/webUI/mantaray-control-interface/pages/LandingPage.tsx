@@ -36,7 +36,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPageChange }) => {
       <div className="w-full max-w-5xl space-y-12 px-6 z-10">
         <div className="space-y-6 text-center max-w-2xl mx-auto">
           <h2 className="text-5xl md:text-6xl font-black tracking-tighter text-white uppercase font-mono leading-none">
-            SYSTEM <span className="text-k3s-primary">ACCESS</span>
+            ROBOT <span className="text-k3s-primary">CONTROL</span>
           </h2>
           <p className="text-sm md:text-base text-k3s-muted font-sans max-w-lg mx-auto leading-relaxed">
             Please select a control module to interface with the ROV systems.
