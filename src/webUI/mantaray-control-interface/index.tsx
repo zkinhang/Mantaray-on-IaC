@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { RosProvider } from './context/RosContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -10,6 +11,8 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <RosProvider>
+      <App />
+    </RosProvider>
   </React.StrictMode>
 );

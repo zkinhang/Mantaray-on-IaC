@@ -13,7 +13,7 @@ class RosService {
   private targetHost: string = localStorage.getItem('ros_target_host') || 
     ((window.location.hostname.includes('mantaray') || window.location.hostname.includes('rov')) 
     ? window.location.hostname 
-    : '100.124.132.15');
+    : 'localhost');
   private recentHosts: string[] = JSON.parse(localStorage.getItem('ros_recent_hosts') || '[]');
 
   private listeners: ((connected: boolean) => void)[] = [];
@@ -151,6 +151,11 @@ class RosService {
         messageType: 'geometry_msgs/Twist'
         });
 
+        // Debug subscriber for /cmd_vel to confirm bridge loopback
+        this.cmdVelTopic.subscribe((message: any) => {
+          console.log(`[ROS] Received /cmd_vel:`, message);
+        });
+
         // Setup /pid/toggle Subscriber
         this.pidToggleSub = new window.ROSLIB.Topic({
         ros: this.ros,
@@ -222,6 +227,7 @@ class RosService {
     });
     
     this.cmdVelTopic.publish(message);
+    console.log(`[ROS] Published to /cmd_vel:`, message);
     const dir = twist.linear.x > 0 ? "FORWARD" : twist.linear.x < 0 ? "BACKWARD" : 
                 twist.angular.z > 0 ? "LEFT" : twist.angular.z < 0 ? "RIGHT" : 
                 twist.linear.z > 0 ? "ASCEND" : twist.linear.z < 0 ? "DESCEND" : "STOP";

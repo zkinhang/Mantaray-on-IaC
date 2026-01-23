@@ -1,22 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { rosService } from '../services/rosService';
-
-interface LogEntry {
-  type: 'info' | 'warn' | 'error' | 'success';
-  message: string;
-  timestamp: string;
-}
+import React, { useEffect, useRef } from 'react';
+import { useRos } from '../context/RosContext';
 
 export const TerminalLogs: React.FC = () => {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const { logs } = useRos();
   const logEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const unsub = rosService.subscribeLogs((newLog) => {
-      setLogs(prev => [...prev.slice(-24), newLog]); // Keep last 25 logs
-    });
-    return () => unsub();
-  }, []);
 
   // Auto-scroll logs
   useEffect(() => {
@@ -52,3 +39,4 @@ export const TerminalLogs: React.FC = () => {
     </div>
   );
 };
+

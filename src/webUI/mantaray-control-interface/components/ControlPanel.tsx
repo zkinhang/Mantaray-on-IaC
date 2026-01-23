@@ -1,15 +1,10 @@
-﻿import React, { useState, useEffect, memo } from 'react';
+﻿import React, { memo } from 'react';
 import { Activity, Power, ShieldAlert } from 'lucide-react';
 import { MovementControl } from './MovementControl';
-import { rosService } from '../services/rosService';
+import { useRos } from '../context/RosContext';
 
 export const ControlPanel: React.FC = memo(() => {
-  const [pidOn, setPidOn] = useState(true);
-
-  useEffect(() => {
-    const unsub = rosService.subscribePid(setPidOn);
-    return () => unsub();
-  }, []);
+  const { pidOn, togglePid } = useRos();
 
   return (
     <div className="bg-k3s-block border-2 border-k3s-border p-4 flex flex-col h-full shadow-2xl min-h-0 overflow-hidden">
@@ -31,7 +26,7 @@ export const ControlPanel: React.FC = memo(() => {
           
           <div className="grid grid-cols-1 gap-3">
             <button 
-              onClick={() => rosService.publishPidToggle(!pidOn)}
+              onClick={() => togglePid(!pidOn)}
               className={`py-3 font-bold border-2 transition-all flex items-center justify-center gap-3 shadow-lg active:scale-95 ${
                 pidOn 
                   ? 'bg-green-600 text-white border-green-400 hover:bg-green-500 shadow-green-900/50' 

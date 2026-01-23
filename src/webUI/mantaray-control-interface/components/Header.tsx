@@ -1,48 +1,30 @@
-﻿import React, { useEffect, useState, useRef, memo } from 'react';
+﻿import React, { useState, useRef, memo } from 'react';
 import { Wifi, WifiOff, Server, ChevronDown, History, Menu, X } from 'lucide-react';
-import { rosService } from '../services/rosService';
+import { useRos } from '../context/RosContext';
 
 interface HeaderProps {
   onMenuClick?: () => void;
+  onLogoClick?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = memo(({ onMenuClick }) => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [targetHost, setTargetHost] = useState(rosService.getTargetHost());
-  const [recentHosts, setRecentHosts] = useState(rosService.getRecentHosts());
+export const Header: React.FC<HeaderProps> = memo(({ onMenuClick, onLogoClick }) => {
+  const { isConnected, targetHost: activeHost, recentHosts, updateTargetHost } = useRos();
+  const [targetHost, setTargetHost] = useState(activeHost);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const unsubscribe = rosService.subscribeStatus(setIsConnected);
-    
-    // Close dropdown on click outside
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      unsubscribe();
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
   const handleHostUpdate = (e: React.FormEvent) => {
     e.preventDefault();
-    rosService.updateTargetHost(targetHost);
-    setRecentHosts(rosService.getRecentHosts());
+    updateTargetHost(targetHost);
     setShowDropdown(false);
   };
 
   const handleRecentClick = (host: string) => {
     setTargetHost(host);
-    rosService.updateTargetHost(host);
-    setRecentHosts(rosService.getRecentHosts());
+    updateTargetHost(host);
     setShowDropdown(false);
   };
+
 
   return (
     <header className="h-16 bg-k3s-block border-b-2 border-k3s-primary flex items-center justify-between px-6 sticky top-0 z-50 shadow-lg">
@@ -56,12 +38,15 @@ export const Header: React.FC<HeaderProps> = memo(({ onMenuClick }) => {
             <Menu className="w-6 h-6" />
           </button>
         )}
-        <div className="flex items-center">
+        <div 
+          className="flex items-center cursor-pointer group hover:opacity-80 transition-opacity"
+          onClick={onLogoClick}
+        >
           <div className="p-1">
             <img src="/mantaray.png" alt="Mantaray Logo" className="w-10 h-10 object-contain" />
           </div>
           <div className="ml-3">
-            <h1 className="text-xl font-bold text-white leading-none tracking-tight">Mantaray<span className="text-k3s-primary">.IaC</span></h1>
+            <h1 className="text-xl font-bold text-white leading-none tracking-tight">Mantaray<span className="text-k3s-primary group-hover:text-white transition-colors">.IaC</span></h1>
             <p className="text-[8px] text-gray-400 uppercase tracking-[0.2em] font-bold mt-1">Robotic Infrastructure Control</p>
           </div>
         </div>

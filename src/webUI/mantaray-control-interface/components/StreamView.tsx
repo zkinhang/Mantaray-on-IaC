@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
-import { Camera, Download, RefreshCw, AlertCircle, Activity } from 'lucide-react';
-import { rosService } from '../services/rosService';
+import { Camera, Download, RefreshCw, AlertCircle, Activity, Settings } from 'lucide-react';
+import { useRos } from '../context/RosContext';
 
 interface StreamViewProps {
   id: string;
@@ -10,6 +10,7 @@ interface StreamViewProps {
 }
 
 export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onUrlChange }) => {
+  const { addLog } = useRos();
   const [isEditing, setIsEditing] = useState(false);
   const [tempUrl, setTempUrl] = useState(url);
   const [error, setError] = useState(false);
@@ -55,16 +56,17 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
   }, [id, onUrlChange, tempUrl]);
 
   const handleImageLoad = useCallback(() => {
+
     if (!isConnected) {
-      rosService.addLog('success', `STREAM [${title}]: Link established`);
+      addLog('success', `STREAM [${title}]: Link established`);
     }
     setIsConnected(true);
     setError(false);
-  }, [isConnected, title]);
+  }, [isConnected, title, addLog]);
 
   const handleImageError = useCallback(() => {
     if (isConnected || !error) {
-      rosService.addLog('error', `STREAM [${title}]: Link failure. Retrying...`);
+      addLog('error', `STREAM [${title}]: Link failure. Retrying...`);
     }
     setIsConnected(false);
     setError(true);
@@ -73,7 +75,8 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
     setTimeout(() => {
       setTimestamp(Date.now());
     }, 2000);
-  }, [isConnected, error, title]);
+  }, [isConnected, error, title, addLog]);
+
 
   const handleRefresh = useCallback(() => {
     setTimestamp(Date.now());
@@ -99,14 +102,14 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
             className={`p-1.5 rounded transition-colors ${isEditing ? 'text-k3s-primary bg-k3s-border' : 'text-gray-400 hover:text-white'}`}
             title="Configure Stream URL"
           >
-            <RefreshCw className="w-4 h-4" />
+            <Settings className="w-4 h-4" />
           </button>
           <button 
             onClick={handleRefresh}
             className="p-1.5 rounded transition-colors text-gray-400 hover:text-white hover:bg-k3s-border"
             title="Refresh Stream"
           >
-            <Activity className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4" />
           </button>
           <button 
             onClick={handleSnapshot}
