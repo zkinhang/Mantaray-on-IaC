@@ -57,7 +57,7 @@ export const Header: React.FC<HeaderProps> = memo(({ onMenuClick, onLogoClick, c
           </div>
           <div className="ml-3">
             <h1 className="text-xl font-bold text-white leading-none tracking-tight">Mantaray<span className="text-k3s-primary group-hover:text-white transition-colors">.IaC</span></h1>
-            <p className="text-[8px] text-gray-400 uppercase tracking-[0.2em] font-bold mt-1">Robotic Infrastructure Control</p>
+            <p className="text-[8px] text-gray-400 uppercase tracking-[0.2em] font-bold mt-1">Robotic Control Panel</p>
           </div>
         </div>
       </div>
