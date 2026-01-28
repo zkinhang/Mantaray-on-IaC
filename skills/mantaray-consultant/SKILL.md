@@ -37,7 +37,7 @@ The application is modularized within `src/`:
 
 ## Repository Layout
 
-To maintain "绮剧敋绱扮坊" (meticulous) order, the project is structured as follows:
+To maintain meticulous order, the project is structured as follows:
 
 - **`ansible/`**: The orchestration core. Contains playbooks for infrastructure (`playbook-infra-airgap.yaml`), network switching, and application deployment.
 - **`src/`**: The source code repository for ROS2 packages (`ros2/`), hardware bridges (`microRos/`), and specialized streaming nodes.
