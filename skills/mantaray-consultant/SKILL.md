@@ -8,12 +8,43 @@ description: Technical consultant for the Mantaray-on-IaC ROV project. Provides 
 This skill provides expert guidance for the Mantaray-on-IaC project, covering infrastructure, software architecture, and deployment workflows.
 
 ## Core Architecture
-- **Environment**: Distributed K3s cluster (ROS2 Jazzy).
+
+### 1. Infrastructure Layer (The Foundation)
+- **Technology**: K3s (Lightweight Kubernetes) cluster managed via Ansible.
+- **Environment**: Distributed ROS2 Jazzy.
 - **Nodes**:
   - `land-pc` (mantaray.local): Surface control, joystick input, UI.
   - `rov-main` (rov-cam.local): Main ROV control, PID, sensors.
   - `rov-camera` (rov.local): Streaming, Micro-ROS hardware interface.
-- **Registries**: Local Docker registry at `mantaray.local:5000`.
+- **Registries**: Local Docker registry at `mantaray.local:5000` for air-gapped deployment.
+
+### 2. Orchestration Layer (The Brain)
+- **Management**: Pods are scheduled via K3s deployments with `nodeSelector` targeting physical hardware.
+- **Workflow**: `ansible/playbook-app.yaml` manages rolling updates and configuration injection.
+
+### 3. Application Layer (The ROS2 Nervous System)
+The application is modularized within `src/`:
+- **Core ROS2 (`src/ros2/`)**:
+  - `control_system_pkg`: PID and stabilization logic.
+  - `controller_pkg`: Human-machine interface/joystick handling.
+  - `thrusterboard_pkg`: Direct communication with motor drivers.
+  - `fdilink_ahrs_ROS2`: AHRS/IMU sensor integration.
+  - `ui_pkg`: The ROV dashboard/HUD.
+  - `custom_interfaces`: Domain-specific ROS2 msg/srv definitions.
+- **Hardware Interface (`src/microRos/`)**: Bridge for low-level controllers (ESP32/Teensy).
+- **Streaming (`src/http_streamer/`)**: High-performance video streaming node.
+- **Launch System (`src/launch_file/`)**: Orchestrates node interaction.
+
+## Repository Layout
+
+To maintain meticulous order, the project is structured as follows:
+
+- **`ansible/`**: The orchestration core. Contains playbooks for infrastructure (`playbook-infra-airgap.yaml`), network switching, and application deployment.
+- **`src/`**: The source code repository for ROS2 packages (`ros2/`), hardware bridges (`microRos/`), and specialized streaming nodes.
+- **`docker/`**: Containerization logic. Defines the runtime environment for the ROV software.
+- **`skills/`**: The "Command Post". Contains technical guidance (SKILL.md) and utility scripts for diagnostics and parameter management.
+- **`k3s-setup/`**: Low-level scripts for bootstrapping the Kubernetes cluster in air-gapped environments.
+- **Root Scripts**: Contains top-level automation scripts for building images (`buildimage.sh`), pushing to local registries (`local_registry_push.sh`), and fixing permissions (`kube_permission.sh`).
 
 ## Key Workflows
 
