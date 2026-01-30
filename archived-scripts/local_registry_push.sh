@@ -1,3 +1,5 @@
+# Archived script for reference on handling local registry, now only need to use build_and_copy_to_local_registry.sh
+
 docker build -f docker/Dockerfile -t mantaray.local:5000/manta-ray-ros:amd64 .
 
 docker buildx build --platform linux/arm64 . -f docker/Dockerfile -t mantaray.local:5000/manta-ray-ros:arm64 --load

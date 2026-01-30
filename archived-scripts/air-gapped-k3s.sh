@@ -1,5 +1,6 @@
 # Sample workflow to setup k3s in air-gapped environment
 # Install k3s in air-gapped environemnt by manually deploying images
+# Archived script for reference, implemented in ansible/playbook-infra-airgap.yaml
 
 # Make the files executable
 chmod +x k3s-setup/install.sh
