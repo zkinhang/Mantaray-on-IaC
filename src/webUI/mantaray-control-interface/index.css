@@ -1,0 +1,36 @@
+/* Global styles for Mantaray Control Interface */
+
+body {
+  background-color: #1b1d21;
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  margin: 0;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #24282f;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #363c47;
+  border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #FFC61C;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+

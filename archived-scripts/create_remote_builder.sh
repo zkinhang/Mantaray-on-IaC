@@ -1,3 +1,5 @@
+# Archived script for reference, used when build a remote builder with multiple nodes (amd64 + raspberry pi as arm64)
+
 docker buildx create --name mantaray_builder --node mantaray_builder --platform linux/amd64 --driver-opt env.BUILDKI
 T_STEP_LOG_MAX_SIZE=10000000   --driver-opt env.BUILDKIT_STEP_LOG_MAX_SPEED=10000000 --config /home/edwin/buildkitd.toml
 

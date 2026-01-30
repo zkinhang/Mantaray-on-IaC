@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mantaray Web Controller</title>
+    <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+
+    <style>
+        body { font-family: monospace; background: #222; color: #0f0; padding: 20px; }
+        .status { padding: 10px; border: 1px solid #444; margin-bottom: 20px; }
+        .connected { background: #004400; }
+        .disconnected { background: #440000; }
+        button { padding: 15px 30px; font-size: 1.2em; cursor: pointer; background: #444; color: white; border: none; margin: 5px; }
+        button:active { background: #666; }
+        .toggle-true { background: #00aa00; }
+        .toggle-false { background: #aa0000; }
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        .control-btn {
+            width: 100px;
+            height: 100px;
+            font-size: 2em;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .control-btn.active {
+            background: #0066ff;
+            border: 3px solid #00aaff;
+        }
+        .empty-cell { visibility: hidden; }
+        
+        .video-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .video-feed {
+            border: 2px solid #444;
+            background: #000;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .video-feed h4 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            color: #0f0;
+        }
+        .video-feed img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #666;
+        }
+        .video-feed .status-indicator {
+            text-align: center;
+            font-size: 0.9em;
+            margin-top: 5px;
+            color: #888;
+        }
+        .video-feed .status-indicator.active {
+            color: #0f0;
+        }
+        .video-feed .status-indicator.error {
+            color: #f00;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>> Mantaray-on-IaC // Web Link</h1>
+    
+    <div id="status" class="status disconnected">Status: Disconnected</div>
+
+    <!-- Video Feeds Section -->
+    <div>
+        <h3>Video Feeds:</h3>
+        <div class="video-container">
+            <div class="video-feed">
+                <h4>ROV Camera</h4>
+                <img id="rov-feed" src="http://rov:30001/stream" alt="ROV Camera Feed" style="width: 640px;">
+                <div id="rov-status" class="status-indicator">Connected</div>
+            </div>
+            <div class="video-feed">
+                <h4>ROV-CAM Camera</h4>
+                <img id="rov-cam-feed" src="http://rov-cam:30002/stream" alt="ROV-CAM Camera Feed" style="width: 640px;">
+                <div id="rov-cam-status" class="status-indicator">Connected</div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <h3>PID Toggle Status:</h3>
+        <div id="msg-data">Waiting for data...</div>
+        <br>
+        <button onclick="publishToggle(true)" class="toggle-true">SEND TRUE</button>
+        <button onclick="publishToggle(false)" class="toggle-false">SEND FALSE</button>
+    </div>
+
+    <div>
+        <h3>Movement Control (10 sec):</h3>
+        <div class="control-grid">
+            <button class="control-btn empty-cell"></button>
+            <button class="control-btn" onclick="sendMovement('forward')" title="Forward">⬆️</button>
+            <button class="control-btn empty-cell"></button>
+            
+            <button class="control-btn" onclick="sendMovement('left')" title="Rotate Left">↶</button>
+            <button class="control-btn" onclick="sendMovement('stop')" title="Stop">⏹️</button>
+            <button class="control-btn" onclick="sendMovement('right')" title="Rotate Right">↷</button>
+            
+            <button class="control-btn empty-cell"></button>
+            <button class="control-btn" onclick="sendMovement('backward')" title="Backward">⬇️</button>
+            <button class="control-btn empty-cell"></button>
+        </div>
+        <div style="margin-top: 20px;">
+            <button onclick="sendMovement('up')" title="Up">🔼 UP</button>
+            <button onclick="sendMovement('down')" title="Down">🔽 DOWN</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const ROBOT_IP = 'localhost'; 
+        const PORT = '9090';
+        const MOVEMENT_DURATION = 10000;
+        const LINEAR_SPEED = 0.5;
+        const ANGULAR_SPEED = 0.5;
+        const VERTICAL_SPEED = 0.5;
+
+        let currentMovementTimer = null;
+
+        // Monitor video feed status
+        document.getElementById('rov-feed').onerror = function() {
+            document.getElementById('rov-status').textContent = 'Connection Error';
+            document.getElementById('rov-status').className = 'status-indicator error';
+        };
+        
+        document.getElementById('rov-cam-feed').onerror = function() {
+            document.getElementById('rov-cam-status').textContent = 'Connection Error';
+            document.getElementById('rov-cam-status').className = 'status-indicator error';
+        };
+
+        // --- ROS CONNECTION ---
+        const ros = new ROSLIB.Ros({
+            url : `ws://${ROBOT_IP}:${PORT}`
+        });
+
+        const statusDiv = document.getElementById('status');
+
+        ros.on('connection', function() {
+            console.log('Connected to websocket server.');
+            statusDiv.innerHTML = "Status: Connected to " + ROBOT_IP;
+            statusDiv.className = 'status connected';
+        });
+
+        ros.on('error', function(error) {
+            console.log('Error connecting to websocket server: ', error);
+            statusDiv.innerHTML = "Status: Error";
+            statusDiv.className = 'status disconnected';
+        });
+
+        ros.on('close', function() {
+            console.log('Connection to websocket server closed.');
+            statusDiv.innerHTML = "Status: Closed";
+            statusDiv.className = 'status disconnected';
+        });
+
+        // --- SUBSCRIBER (PID Toggle) ---
+        const listener = new ROSLIB.Topic({
+            ros : ros,
+            name : '/pid/toggle',
+            messageType : 'std_msgs/Bool'
+        });
+
+        listener.subscribe(function(message) {
+            console.log('Received message on ' + listener.name + ': ' + JSON.stringify(message));
+            const status = message.data ? "TRUE (PID ON)" : "FALSE (PID OFF)";
+            const color = message.data ? "#00ff00" : "#ff0000";
+            document.getElementById('msg-data').innerHTML = 
+                `<span style="color: ${color}; font-weight: bold;">LAST MSG: ${status}</span>`;
+        });
+
+        // --- PUBLISHER (PID Toggle) ---
+        const pidToggle = new ROSLIB.Topic({
+            ros : ros,
+            name : '/pid/toggle', 
+            messageType : 'std_msgs/Bool'
+        });
+
+        function publishToggle(value) {
+            const boolMsg = new ROSLIB.Message({
+                data : value
+            });
+            pidToggle.publish(boolMsg);
+            console.log("Published Bool: " + value);
+        }
+
+        // --- PUBLISHER (CMD_VEL) ---
+        const cmdVel = new ROSLIB.Topic({
+            ros : ros,
+            name : '/cmd_vel', 
+            messageType : 'geometry_msgs/Twist'
+        });
+
+        function publishTwist(linear_x, linear_y, linear_z, angular_x, angular_y, angular_z) {
+            const twist = new ROSLIB.Message({
+                linear : { x : linear_x, y : linear_y, z : linear_z },
+                angular : { x : angular_x, y : angular_y, z : angular_z }
+            });
+            cmdVel.publish(twist);
+            console.log("Published Twist:", twist);
+        }
+
+        function sendMovement(direction) {
+            if (currentMovementTimer) {
+                clearTimeout(currentMovementTimer);
+            }
+
+            switch(direction) {
+                case 'forward':
+                    publishTwist(LINEAR_SPEED, 0, 0, 0, 0, 0);
+                    break;
+                case 'backward':
+                    publishTwist(-LINEAR_SPEED, 0, 0, 0, 0, 0);
+                    break;
+                case 'left':
+                    publishTwist(0, 0, 0, 0, 0, ANGULAR_SPEED);
+                    break;
+                case 'right':
+                    publishTwist(0, 0, 0, 0, 0, -ANGULAR_SPEED);
+                    break;
+                case 'up':
+                    publishTwist(0, 0, VERTICAL_SPEED, 0, 0, 0);
+                    break;
+                case 'down':
+                    publishTwist(0, 0, -VERTICAL_SPEED, 0, 0, 0);
+                    break;
+                case 'stop':
+                    publishTwist(0, 0, 0, 0, 0, 0);
+                    return;
+            }
+
+            currentMovementTimer = setTimeout(function() {
+                publishTwist(0, 0, 0, 0, 0, 0);
+                console.log("Movement stopped after " + MOVEMENT_DURATION + "ms");
+            }, MOVEMENT_DURATION);
+        }
+    </script>
+</body>
+</html>

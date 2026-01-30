@@ -38,33 +38,6 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ui-node-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: ui-node
-  template:
-    metadata:
-      labels:
-        app: ui-node
-    spec:
-      hostNetwork: true
-      hostIPC: true
-      nodeSelector:
-        ros2-hardware: land-pc
-      containers:
-      - name: ui-node-container
-        image: "{{ main_ros_image }}"
-        args: ["ros2", "run", "ui_pkg", "ui_node"]
-        # Required for interactive terminal UI
-        tty: true
-        stdin: true
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
   name: receiver-deployment
 spec:
   replicas: 1
@@ -107,173 +80,6 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: http-image-getter-a-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: http-image-getter-a
-  template:
-    metadata:
-      labels:
-        app: http-image-getter-a
-    spec:
-      securityContext:
-        runAsUser: 1000  # <-- Replace with your UID
-        runAsGroup: 1000 # <-- Replace with your GID
-      nodeSelector:
-        ros2-hardware: land-pc
-      containers:
-      - name: http-image-getter-a-container
-        image: "{{ main_ros_image }}"
-        args: ["httpGetImage"]
-        # Grant privileges to access host devices
-        env:
-        - name: DISPLAY
-          value: ":0"
-        - name: XAUTHORITY
-          value: "/root/.Xauthority"
-        securityContext:
-          privileged: true
-        volumeMounts:
-        - name: x11-forwarding
-          mountPath: "{{ path_x11_socket }}"
-        - name: dev-dri
-          mountPath: "{{ path_dev_dri }}"
-        - name: xauthority
-          mountPath: "{{ path_xauthority }}"
-      volumes:
-      - name: x11-forwarding
-        hostPath:
-          path: "{{ path_x11_socket }}"
-      - name: dev-dri
-        hostPath:
-          path: "{{ path_dev_dri }}"
-      - name: xauthority
-        hostPath:
-          path: "{{ path_xauthority }}"
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: http-image-getter-b-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: http-image-getter-b
-  template:
-    metadata:
-      labels:
-        app: http-image-getter-b
-    spec:
-      securityContext:
-        runAsUser: 1000  # <-- Replace with your UID
-        runAsGroup: 1000 # <-- Replace with your GID
-      nodeSelector:
-        ros2-hardware: land-pc
-      containers:
-      - name: http-image-getter-b-container
-        image: "{{ main_ros_image }}"
-        args: ["httpGetImage_cam"]
-        # Grant privileges to access host devices
-        env:
-        - name: DISPLAY
-          value: ":0"
-        - name: XAUTHORITY
-          value: "/root/.Xauthority"
-        securityContext:
-          privileged: true
-        volumeMounts:
-        - name: x11-forwarding
-          mountPath: "{{ path_x11_socket }}"
-        - name: dev-dri
-          mountPath: "{{ path_dev_dri }}"
-        - name: xauthority
-          mountPath: "{{ path_xauthority }}"
-      volumes:
-      - name: x11-forwarding
-        hostPath:
-          path: "{{ path_x11_socket }}"
-      - name: dev-dri
-        hostPath:
-          path: "{{ path_dev_dri }}"
-      - name: xauthority
-        hostPath:
-          path: "{{ path_xauthority }}"
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: capture-image-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: capture-image
-  template:
-    metadata:
-      labels:
-        app: capture-image
-    spec:
-      hostNetwork: true
-      hostIPC: true
-      nodeSelector:
-        ros2-hardware: land-pc
-      containers:
-      - name: capture-image-container
-        image: "{{ main_ros_image }}"
-        args: ["ros2", "run", "streaming_pkg", "capture_image"]
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: save-image-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: save-image
-  template:
-    metadata:
-      labels:
-        app: save-image
-    spec:
-      hostNetwork: true
-      hostIPC: true
-      nodeSelector:
-        ros2-hardware: land-pc
-      containers:
-      - name: save-image-container
-        image: "{{ main_ros_image }}"
-        args: ["ros2", "run", "streaming_pkg", "save_image"]
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: morse-code-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: morse-code
-  template:
-    metadata:
-      labels:
-        app: morse-code
-    spec:
-      hostNetwork: true
-      hostIPC: true
-      nodeSelector:
-        ros2-hardware: land-pc
-      containers:
-      - name: morse-code-container
-        image: "{{ main_ros_image }}"
-        args: ["ros2", "run", "morsecode_pkg", "mos_code"]
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
   name: foxglove-bridge-deployment
 spec:
   replicas: 1
@@ -293,6 +99,35 @@ spec:
       - name: foxglove-bridge-container
         image: "{{ main_ros_image }}"
         args: ["ros2", "launch", "foxglove_bridge", "foxglove_bridge_launch.xml", "port:=8765"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rosbridge-server-deployment
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rosbridge-server
+  template:
+    metadata:
+      labels:
+        app: rosbridge-server
+    spec:
+      # hostNetwork is useful for simplicity in Mode A/B networking
+      hostNetwork: true 
+      nodeSelector:
+        # Deploying on the same node as Foxglove for consistency
+        ros2-hardware: land-pc 
+      containers:
+      - name: rosbridge-server-container
+        image: "{{ main_ros_image }}"
+        # Launching rosbridge_server specifically
+        args: ["ros2", "launch", "rosbridge_server", "rosbridge_websocket_launch.xml", "delay_between_messages:=0.0"]
+        ports:
+        - containerPort: 9090
+          name: websocket
 ---
 apiVersion: apps/v1
 kind: Deployment

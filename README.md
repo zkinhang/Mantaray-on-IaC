@@ -7,17 +7,19 @@
 # Ansible Playbook Manual
 
 ## Quick Command Reference
+(you may add `uv run` before it)
 ```bash
 # Full installation
 ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml
 bash kube_permission.sh
-ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
+ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
 ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
+bash display_init.sh
 
 # Network switch
 ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
 bash kube_permission.sh
-ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
+ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
 ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
 
 # Apply changes from robot_params.json

@@ -20,8 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'send_image = streaming_pkg.opencv:main',
-            'receive_image = streaming_pkg.opencvbridged:main',
+            # 'send_image = streaming_pkg.opencv:main',
+            # 'receive_image = streaming_pkg.opencvbridged:main',
             'capture_image = streaming_pkg.image_capture:main', # Renamed from capture_image for consistency
             'save_image = streaming_pkg.image_saver:main', # Add the new node
         ],

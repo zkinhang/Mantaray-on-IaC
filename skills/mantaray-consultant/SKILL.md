@@ -27,9 +27,9 @@ The application is modularized within `src/`:
 - **Core ROS2 (`src/ros2/`)**:
   - `control_system_pkg`: PID and stabilization logic.
   - `controller_pkg`: Human-machine interface/joystick handling.
-  - `thrusterboard_pkg`: Direct communication with motor drivers.
+  - `thrusterboard_pkg`: Direct communication with thrusters.
   - `fdilink_ahrs_ROS2`: AHRS/IMU sensor integration.
-  - `ui_pkg`: The ROV dashboard/HUD.
+  - `receiver_pkg`: Translates high-level commands from controller to digital signals to be written to hardware (e.g. grippers).
   - `custom_interfaces`: Domain-specific ROS2 msg/srv definitions.
 - **Hardware Interface (`src/microRos/`)**: Bridge for low-level controllers (ESP32/Teensy).
 - **Streaming (`src/http_streamer/`)**: High-performance video streaming node.
@@ -39,28 +39,36 @@ The application is modularized within `src/`:
 
 To maintain meticulous order, the project is structured as follows:
 
-- **`ansible/`**: The orchestration core. Contains playbooks for infrastructure (`playbook-infra-airgap.yaml`), network switching, and application deployment.
-- **`src/`**: The source code repository for ROS2 packages (`ros2/`), hardware bridges (`microRos/`), and specialized streaming nodes.
-- **`docker/`**: Containerization logic. Defines the runtime environment for the ROV software.
-- **`skills/`**: The "Command Post". Contains technical guidance (SKILL.md) and utility scripts for diagnostics and parameter management.
-- **`k3s-setup/`**: Low-level scripts for bootstrapping the Kubernetes cluster in air-gapped environments.
-- **Root Scripts**: Contains top-level automation scripts for building images (`buildimage.sh`), pushing to local registries (`local_registry_push.sh`), and fixing permissions (`kube_permission.sh`).
+```text
+.
+├── ansible/          # Infrastructure orchestration (Playbooks & K8s manifests)
+├── docker/           # Containerization logic and runtime environments
+├── k3s-setup/        # Air-gapped Kubernetes cluster bootstrapping scripts
+├── skills/           # Technical guidance and utility diagnostic scripts
+├── src/              # Multi-language source code (e.g. ROS 2, Micro-ROS, C++, etc)
+└── *.sh              # Root-level automation for building and deployment
+```
+
+- **Root Scripts**: Contains top-level automation scripts for building images and pushing to local registries (`build_and_copy_to_local_registry.sh`), and fixing permissions (`kube_permission.sh`).
 
 ## Key Workflows
 
 ### Infrastructure Setup & Maintenance
 - **Initial Setup (Full Reinstall)**: Run `ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml`. Avoid running this unless a total cluster reset is required.
-- **Fix IP/Network Changes (Preferred)**: Run `ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml`. This fixes IP mismatches and interface changes (e.g., Wi-Fi to Ethernet) or any malfunctioning after a period of time, without reinstalling the cluster.
+- **Fix IP/Network Changes (Preferred)**: Make sure the network config in `ansible/inventory_infra.ini` is up-to-date, and run `ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml`. This fixes IP mismatches and interface changes (e.g., Wi-Fi to Ethernet) or any malfunctioning after a period of time, without reinstalling the cluster.
 - **Post-Setup Permission Fix**: **Critical**: Always run `bash kube_permission.sh` after cluster changes to fix local `kubectl` access.
+- **Dashboard Access**: After infrastructure changes, run `ansible-playbook -i  ansible/playbook-dashboard-setup.yaml` to re-expose the UI and generate a refreshed admin token for access.
 
 ### Application Deployment
-- **Build**: `./copy_to_local_registry.sh`.
+- **Build**: `./build_and_copy_to_local_registry.sh`.
 - **Deploy/Update Config**: `ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml`. Use this after editing `robot_params.json`; it automatically restarts relevant control nodes.
-- **Full Application Restart**: Add `-e "force_restart=true"` to the deploy command to force a rolling update of all pods (use for code changes or verifying a fresh state).
+- **Full Application Restart**: Add `-e "force_restart=true"` to the deploy command to force a rolling update of all pods following  (use for code changes or verifying a fresh state)`ansible/vars/deployment-vars.yaml`.
 
 ### Configuration
 - `ansible/config/robot_params.json`: Centralized PID gains, port assignments, and sensor offsets.
-- `ansible/vars/hardware-paths.yaml`: Maps peripheral devices to container volumes.
+- `ansible/vars/deployment-vars.yaml`: Manages container images and lists all active Kubernetes deployments for the application.
+- `ansible/vars/hardware-paths.yaml`: Maps physical peripheral devices (cameras, IMUs, serial ports) to container volumes.
+- `ansible/vars/infra-vars.yaml`: Defines cluster-wide settings, including installation paths, local registry ports, node labels, and physical network interface names.
 
 ## Debugging and Maintenance
 - **Cluster Diagnostics**: See [references/troubleshooting.md](references/troubleshooting.md).
