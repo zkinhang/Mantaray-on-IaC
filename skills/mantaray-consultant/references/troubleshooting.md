@@ -28,7 +28,6 @@ This guide covers common issues and resolutions in the Mantaray-on-IaC environme
 - **Fix**:
   - Check `ansible/vars/hardware-paths.yaml` for correct device mappings.
   - Verify device presence on host: `ls /dev/video*`
-  - Check logs: `kubectl logs -l app=streaming-pkg`
 
 ### Thruster Communication Failure
 - **Cause**: Serial permissions or wrong baud rate.
