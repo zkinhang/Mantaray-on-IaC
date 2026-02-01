@@ -4,6 +4,89 @@
 
 ---
 
+# Getting Started
+
+## Cloning the Repository
+
+To get started with this project, first clone the repository:
+
+```bash
+git clone https://github.com/zkinhang/Mantaray-on-IaC.git
+cd Mantaray-on-IaC
+```
+
+## Pulling Updates
+
+To update your local copy with the latest changes from the repository:
+
+```bash
+# Update your current branch with the latest changes
+git pull
+
+# Or, to fetch all changes and then merge (replace 'main' with your default branch if different)
+git fetch origin
+git merge origin/main
+
+# If you're working on a specific branch
+git pull origin <branch-name>
+```
+
+## Checking Repository Status
+
+To see what files have been modified and the current branch:
+
+```bash
+# Check current status
+git status
+
+# Check current branch
+git branch
+
+# View recent commits
+git log --oneline -10
+```
+
+## Installing Dependencies
+
+This project uses Python dependencies managed by `uv`. To install dependencies:
+
+```bash
+# Install uv if you haven't already
+pip install uv
+
+# Install project dependencies
+uv sync
+```
+
+Or using traditional pip:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Updating After Pulling Changes
+
+After pulling updates, you may need to:
+
+1. **Update Python dependencies** (if `requirements.txt` or `pyproject.toml` changed):
+   ```bash
+   uv sync
+   # or
+   pip install -r requirements.txt
+   ```
+
+2. **Rebuild Docker images** (if Dockerfiles changed):
+   ```bash
+   bash build_and_copy_to_local_registry.sh
+   ```
+
+3. **Redeploy applications** (if application code changed):
+   ```bash
+   ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
+   ```
+
+---
+
 # Ansible Playbook Manual
 
 ## Quick Command Reference
