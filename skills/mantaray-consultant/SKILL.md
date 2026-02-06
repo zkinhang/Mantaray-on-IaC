@@ -32,7 +32,7 @@ The application is modularized within `src/`:
   - `receiver_pkg`: Translates high-level commands from controller to digital signals to be written to hardware (e.g. grippers).
   - `custom_interfaces`: Domain-specific ROS2 msg/srv definitions.
 - **Hardware Interface (`src/microRos/`)**: Bridge for low-level controllers (ESP32/Teensy).
-- **Streaming (`src/http_streamer/`)**: High-performance video streaming node.
+- **Streaming (`src/http_streamer/`, `src/webrtc_streamer/`)**: High-performance video streaming nodes. Transitioning from MJPEG over HTTP to WebRTC for lower latency and bandwidth efficiency.
 - **Launch System (`src/launch_file/`)**: Orchestrates node interaction.
 
 ## Repository Layout
@@ -50,6 +50,13 @@ To maintain meticulous order, the project is structured as follows:
 ```
 
 - **Root Scripts**: Contains top-level automation scripts for building images and pushing to local registries (`build_and_copy_to_local_registry.sh`), and fixing permissions (`kube_permission.sh`).
+
+## Knowledge & Documentation
+- **Knowledge Hub**: Managed via `skills/notion-hub-sync/`. 
+- **Sync Protocol**:
+  - `manta_hub_sync.py`: Downloads published documents from Notion to `/home/EEC/clawd/docs/notion_sync/published/`.
+  - `manta_hub_upload.py`: Uploads pending documents from `/home/EEC/clawd/docs/notion_sync/pending/` to Notion.
+- **Naming Convention**: Follows the `PREFIX_topic_REF_Name.md` format for truth resolution.
 
 ## Key Workflows
 
