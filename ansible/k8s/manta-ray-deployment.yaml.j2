@@ -155,23 +155,26 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: http-streamer-a-deployment
+  name: webrtc-sender-a-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: http-streamer-a
+      app: webrtc-sender-a
   template:
     metadata:
       labels:
-        app: http-streamer-a
+        app: webrtc-sender-a
     spec:
+      hostNetwork: true
+      hostIPC: true
+      dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
         ros2-hardware: rov-main
       containers:
-      - name: http-streamer-a-container
+      - name: webrtc-sender-a-container
         image: "{{ main_ros_image }}"
-        args: ["httpStreamer"]
+        args: ["python", "/ros2_ws/src/webrtc/webrtc_sender.py", "--device", "{{ path_a_camera }}", "--signaling", "ws://webrtc-signaling-service:9000?stream=rov", "--width", "{{ webrtc_main_width | default(1280) }}", "--height", "{{ webrtc_main_height | default(720) }}", "--fps", "{{ webrtc_main_fps | default(30) }}", "--bitrate", "{{ webrtc_main_bitrate | default(2500) }}", "--key-int", "{{ webrtc_main_key_int | default(30) }}"]
         securityContext:
           privileged: true
         volumeMounts:
@@ -185,23 +188,26 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: http-streamer-b-deployment
+  name: webrtc-sender-b-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: http-streamer-b
+      app: webrtc-sender-b
   template:
     metadata:
       labels:
-        app: http-streamer-b
+        app: webrtc-sender-b
     spec:
+      hostNetwork: true
+      hostIPC: true
+      dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
         ros2-hardware: rov-camera
       containers:
-      - name: http-streamer-b-container
+      - name: webrtc-sender-b-container
         image: "{{ main_ros_image }}"
-        args: ["httpStreamer"]
+        args: ["python", "/ros2_ws/src/webrtc/webrtc_sender.py", "--device", "{{ path_b_camera }}", "--signaling", "ws://webrtc-signaling-service:9000?stream=rov-cam", "--width", "{{ webrtc_aux_width | default(640) }}", "--height", "{{ webrtc_aux_height | default(480) }}", "--fps", "{{ webrtc_aux_fps | default(30) }}", "--bitrate", "{{ webrtc_aux_bitrate | default(900) }}", "--key-int", "{{ webrtc_aux_key_int | default(30) }}"]
         securityContext:
           privileged: true
         volumeMounts:
@@ -211,6 +217,30 @@ spec:
       - name: camera-device
         hostPath:
           path: "{{ path_b_camera }}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webrtc-signaling-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webrtc-signaling
+  template:
+    metadata:
+      labels:
+        app: webrtc-signaling
+    spec:
+      nodeSelector:
+        ros2-hardware: land-pc
+      containers:
+      - name: webrtc-signaling-container
+        image: "{{ main_ros_image }}"
+        args: ["python", "/ros2_ws/src/webrtc/signaling_server.py"]
+        ports:
+        - containerPort: 9000
+          name: signaling
 ---
 apiVersion: apps/v1
 kind: Deployment

@@ -11,12 +11,12 @@ export const useStreams = () => {
     {
       id: 'rov-feed',
       title: 'ROV Camera Feed',
-      url: 'http://rov:30001/stream'
+      url: 'ws://rov:9000?stream=rov'
     },
     {
       id: 'rov-cam-feed',
       title: 'ROV-CAM Camera Feed',
-      url: 'http://rov-cam:30002/stream'
+      url: 'ws://rov:9000?stream=rov-cam'
     }
   ]);
 

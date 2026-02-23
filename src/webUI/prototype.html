@@ -87,12 +87,12 @@
         <div class="video-container">
             <div class="video-feed">
                 <h4>ROV Camera</h4>
-                <img id="rov-feed" src="http://rov:30001/stream" alt="ROV Camera Feed" style="width: 640px;">
+                <video id="rov-feed" style="width: 640px;" autoplay playsinline muted></video>
                 <div id="rov-status" class="status-indicator">Connected</div>
             </div>
             <div class="video-feed">
                 <h4>ROV-CAM Camera</h4>
-                <img id="rov-cam-feed" src="http://rov-cam:30002/stream" alt="ROV-CAM Camera Feed" style="width: 640px;">
+                <video id="rov-cam-feed" style="width: 640px;" autoplay playsinline muted></video>
                 <div id="rov-cam-status" class="status-indicator">Connected</div>
             </div>
         </div>
@@ -138,16 +138,102 @@
 
         let currentMovementTimer = null;
 
-        // Monitor video feed status
-        document.getElementById('rov-feed').onerror = function() {
-            document.getElementById('rov-status').textContent = 'Connection Error';
-            document.getElementById('rov-status').className = 'status-indicator error';
-        };
-        
-        document.getElementById('rov-cam-feed').onerror = function() {
-            document.getElementById('rov-cam-status').textContent = 'Connection Error';
-            document.getElementById('rov-cam-status').className = 'status-indicator error';
-        };
+        function startWebRtcStream(videoId, signalingUrl, statusId) {
+            const videoEl = document.getElementById(videoId);
+            const statusEl = document.getElementById(statusId);
+
+            let ws;
+            let pc;
+            let reconnectTimer;
+
+            const scheduleReconnect = () => {
+                if (reconnectTimer) return;
+                reconnectTimer = setTimeout(() => {
+                    reconnectTimer = null;
+                    start();
+                }, 2000);
+            };
+
+            const updateStatus = (text, className) => {
+                statusEl.textContent = text;
+                statusEl.className = `status-indicator ${className || ''}`.trim();
+            };
+
+            const cleanup = () => {
+                if (ws) ws.close();
+                if (pc) pc.close();
+                ws = null;
+                pc = null;
+                if (videoEl) videoEl.srcObject = null;
+            };
+
+            const start = () => {
+                cleanup();
+                updateStatus('Connecting...', '');
+
+                ws = new WebSocket(signalingUrl);
+                pc = new RTCPeerConnection({ iceServers: [] });
+
+                pc.ontrack = (event) => {
+                    if (event.streams[0]) {
+                        videoEl.srcObject = event.streams[0];
+                    }
+                    updateStatus('Connected', 'active');
+                };
+
+                pc.onconnectionstatechange = () => {
+                    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                        updateStatus('Connection Error', 'error');
+                        scheduleReconnect();
+                    }
+                };
+
+                pc.onicecandidate = (event) => {
+                    if (event.candidate && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'ice', candidate: event.candidate }));
+                    }
+                };
+
+                ws.onopen = async () => {
+                    try {
+                        const offer = await pc.createOffer({ offerToReceiveVideo: true });
+                        await pc.setLocalDescription(offer);
+                        ws.send(JSON.stringify({ type: 'offer', sdp: offer.sdp }));
+                    } catch (e) {
+                        updateStatus('Connection Error', 'error');
+                        scheduleReconnect();
+                    }
+                };
+
+                ws.onmessage = async (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        if (message.type === 'answer') {
+                            await pc.setRemoteDescription({ type: 'answer', sdp: message.sdp });
+                        } else if (message.type === 'ice' && message.candidate) {
+                            await pc.addIceCandidate(message.candidate);
+                        }
+                    } catch (e) {
+                        updateStatus('Connection Error', 'error');
+                    }
+                };
+
+                ws.onerror = () => {
+                    updateStatus('Connection Error', 'error');
+                    scheduleReconnect();
+                };
+
+                ws.onclose = () => {
+                    updateStatus('Connection Error', 'error');
+                    scheduleReconnect();
+                };
+            };
+
+            start();
+        }
+
+        startWebRtcStream('rov-feed', 'ws://rov:9000?stream=rov', 'rov-status');
+        startWebRtcStream('rov-cam-feed', 'ws://rov:9000?stream=rov-cam', 'rov-cam-status');
 
         // --- ROS CONNECTION ---
         const ros = new ROSLIB.Ros({

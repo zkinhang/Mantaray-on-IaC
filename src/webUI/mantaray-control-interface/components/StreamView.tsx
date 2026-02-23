@@ -16,25 +16,36 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
   const [error, setError] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [timestamp, setTimestamp] = useState(Date.now());
-  
-  const imgRef = useRef<HTMLImageElement>(null);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const connectedRef = useRef(false);
+  const errorRef = useRef(false);
 
   // When URL changes, reset state and timestamp
   useEffect(() => {
     setTimestamp(Date.now());
     setIsConnected(false);
     setError(false);
+    connectedRef.current = false;
+    errorRef.current = false;
+  }, [url]);
+
+  useEffect(() => {
+    setTempUrl(url);
   }, [url]);
 
   const handleSnapshot = useCallback(() => {
-    if (!imgRef.current) return;
+    if (!videoRef.current) return;
     try {
       const canvas = document.createElement('canvas');
-      canvas.width = imgRef.current.naturalWidth;
-      canvas.height = imgRef.current.naturalHeight;
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(imgRef.current, 0, 0);
+        ctx.drawImage(videoRef.current, 0, 0);
         const dataUrl = canvas.toDataURL('image/png');
         const link = document.createElement('a');
         link.download = `mantaray_${id}_${new Date().toISOString()}.png`;
@@ -55,38 +66,130 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
     setError(false);
   }, [id, onUrlChange, tempUrl]);
 
-  const handleImageLoad = useCallback(() => {
-
-    if (!isConnected) {
-      addLog('success', `STREAM [${title}]: Link established`);
-    }
-    setIsConnected(true);
-    setError(false);
-  }, [isConnected, title, addLog]);
-
-  const handleImageError = useCallback(() => {
-    if (isConnected || !error) {
-      addLog('error', `STREAM [${title}]: Link failure. Retrying...`);
-    }
-    setIsConnected(false);
-    setError(true);
-    
-    // Retry connection after 2 seconds by updating timestamp
-    setTimeout(() => {
+  const scheduleReconnect = useCallback(() => {
+    if (reconnectTimerRef.current) return;
+    reconnectTimerRef.current = window.setTimeout(() => {
+      reconnectTimerRef.current = null;
       setTimestamp(Date.now());
     }, 2000);
-  }, [isConnected, error, title, addLog]);
+  }, []);
 
 
   const handleRefresh = useCallback(() => {
     setTimestamp(Date.now());
     setIsConnected(false);
     setError(false);
+    connectedRef.current = false;
+    errorRef.current = false;
   }, []);
 
-  // Construct stream URL with timestamp to prevent caching and force reconnects
-  // Check if URL already has params to decide between ? and &
-  const streamUrl = `${url}${url.includes('?') ? '&' : '?'}t=${timestamp}`;
+  useEffect(() => {
+    if (!url) return undefined;
+
+    setIsConnected(false);
+    setError(false);
+
+    const ws = new WebSocket(url);
+    wsRef.current = ws;
+
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    pcRef.current = pc;
+
+    pc.ontrack = (event) => {
+      if (videoRef.current && event.streams[0]) {
+        if (videoRef.current.srcObject !== event.streams[0]) {
+          videoRef.current.srcObject = event.streams[0];
+        }
+      }
+      if (!connectedRef.current) {
+        addLog('success', `STREAM [${title}]: Link established`);
+      }
+      setIsConnected(true);
+      setError(false);
+      connectedRef.current = true;
+      errorRef.current = false;
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        if (connectedRef.current || !errorRef.current) {
+          addLog('error', `STREAM [${title}]: Link failure. Retrying...`);
+        }
+        setIsConnected(false);
+        setError(true);
+        connectedRef.current = false;
+        errorRef.current = true;
+        scheduleReconnect();
+      }
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ice', candidate: event.candidate }));
+      }
+    };
+
+    ws.onopen = async () => {
+      try {
+        const offer = await pc.createOffer({ offerToReceiveVideo: true });
+        await pc.setLocalDescription(offer);
+        ws.send(JSON.stringify({ type: 'offer', sdp: offer.sdp }));
+      } catch (e) {
+        console.error('WebRTC offer failed:', e);
+        setError(true);
+        errorRef.current = true;
+        scheduleReconnect();
+      }
+    };
+
+    ws.onmessage = async (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'answer') {
+          await pc.setRemoteDescription(new RTCSessionDescription({
+            type: 'answer',
+            sdp: message.sdp,
+          }));
+        } else if (message.type === 'ice' && message.candidate) {
+          await pc.addIceCandidate(new RTCIceCandidate(message.candidate));
+        }
+      } catch (e) {
+        console.error('WebRTC signaling error:', e);
+      }
+    };
+
+    ws.onerror = () => {
+      setError(true);
+      errorRef.current = true;
+      scheduleReconnect();
+    };
+
+    ws.onclose = () => {
+      setIsConnected(false);
+      setError(true);
+      connectedRef.current = false;
+      errorRef.current = true;
+      scheduleReconnect();
+    };
+
+    return () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      if (pcRef.current) {
+        pcRef.current.close();
+        pcRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [url, timestamp, addLog, scheduleReconnect, title]);
 
   return (
     <div className="flex flex-col h-full bg-k3s-block border-2 border-k3s-border hover:border-k3s-primary transition-colors duration-300 min-h-0 overflow-hidden">
@@ -129,7 +232,7 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
             value={tempUrl}
             onChange={(e) => setTempUrl(e.target.value)}
             className="flex-1 bg-k3s-block border border-k3s-border px-3 py-1.5 text-xs text-white focus:outline-none focus:border-k3s-primary font-mono"
-            placeholder="http://..."
+            placeholder="ws://..."
           />
           <button 
             onClick={handleSaveUrl}
@@ -140,7 +243,7 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
         </div>
       ) : null}
 
-      {/* Stream Area - Native MJPEG Implementation */}
+      {/* Stream Area - WebRTC Video */}
       <div className="relative flex-1 bg-black flex items-center justify-center min-h-0 overflow-hidden group">
         
         {/* Loading / Error State */}
@@ -161,17 +264,11 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
           </div>
         ) : null}
 
-        {/* 
-          Native MJPEG Stream 
-          Note: For multipart/x-mixed-replace, a simple img tag works.
-          The browser keeps the connection open.
-        */}
-        <img 
-          ref={imgRef}
-          src={streamUrl}
-          alt={`${title} Stream`}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
+        <video 
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
           className={`w-full h-full object-contain transition-opacity duration-500 ${isConnected ? 'opacity-100' : 'opacity-0'}`}
         />
         

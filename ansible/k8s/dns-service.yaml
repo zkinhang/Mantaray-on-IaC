@@ -1,27 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: rov-streamer-service
+  name: webrtc-signaling-service
 spec:
-  type: NodePort           # 1. Change type to NodePort
+  type: NodePort
   selector:
-    app: http-streamer-a
+    app: webrtc-signaling
   ports:
     - protocol: TCP
-      port: 5000
-      targetPort: 5000
-      nodePort: 30001      # 2. Expose on Host Port 30001
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: rov-cam-streamer-service 
-spec:
-  type: NodePort           # 1. Change type to NodePort
-  selector:
-    app: http-streamer-b
-  ports:
-    - protocol: TCP
-      port: 5000
-      targetPort: 5000
-      nodePort: 30002      # 2. Expose on Host Port 30002
+      port: 9000
+      targetPort: 9000
+      nodePort: 30003

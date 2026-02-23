@@ -62,6 +62,15 @@ FROM ros:jazzy-ros-core
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-opencv \
     python3-numpy \
+    python3-gi \
+    gir1.2-gst-plugins-base-1.0 \
+    gir1.2-gst-plugins-bad-1.0 \
+    gstreamer1.0-tools \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly \
+    gstreamer1.0-libav \
     libcurl4 \
     libssl3 \
     ros-jazzy-cv-bridge \
@@ -87,12 +96,18 @@ COPY --from=builder /ros2_ws/install ./install
 # Copy the other launch files to run directly in src
 COPY --from=builder /ros2_ws/src/launch_file /ros2_ws/src/launch_file
 
+# WebRTC sender scripts
+COPY --from=builder /ros2_ws/src/webrtc /ros2_ws/src/webrtc
+
 # Copy the microros folder
 # COPY --from=builder /ros2_ws/src/microRos /ros2_ws/src/microRos
 
 # Copy and set up the entrypoint script
 ENV PATH="/ros2_ws/.venv/bin:$PATH"
 ENV PYTHONPATH="/usr/lib/python3/dist-packages:/ros2_ws/.venv/lib/python3.12/site-packages:$PYTHONPATH"
+
+# Install runtime Python deps in the venv
+RUN /ros2_ws/.venv/bin/pip install --no-cache-dir websockets
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
