@@ -241,7 +241,13 @@ This script copies the kubeconfig and sets correct ownership:
 sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
 sudo chown "$USER":"$USER" ~/.kube/config
 ```
+### Lost internet access after changing between eth and wlan
 
+Restart the system service by:
+
+```bash
+sudo systemctl restart NetworkManager
+```
 ---
 
 ## TODO
