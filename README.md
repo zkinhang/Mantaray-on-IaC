@@ -248,4 +248,98 @@ sudo chown "$USER":"$USER" ~/.kube/config
 
 - [ ] Fix automatic Kubernetes permission configuration
 - [ ] CI/CD pipeline for uploading images to local registry
-- [ ] Control panel UI
+- [x] Control panel UI (see [Mantaray Control Interface](#mantaray-control-interface-web-ui))
+
+---
+
+# Mantaray Control Interface (Web UI)
+
+The `src/webUI/mantaray-control-interface` directory contains a browser-based control interface for the Mantaray ROV, developed by Louis ([@Louis1125](https://github.com/Louis1125)).
+
+## Features
+
+| Module | Description |
+|--------|-------------|
+| **Primary Dashboard** | Real-time dual-camera video feeds (ROV + ROV-CAM), terminal logs, and flight controls |
+| **Movement Control** | Directional movement (forward/backward/left/right/up/down) with configurable speed and duration via ROS 2 `/cmd_vel` topic |
+| **PID Toggle** | Enable/disable the PID controller via the `/pid/toggle` ROS 2 topic |
+| **Advanced Telemetry** | Sensor diagnostics and environment monitoring |
+| **System Configuration** | ROS bridge host configuration (persisted in `localStorage`) |
+
+## Tech Stack
+
+- **React 19** + **TypeScript**
+- **Vite 6** (build tooling)
+- **Tailwind CSS 4** (styling)
+- **roslib.js** (ROS 2 WebSocket bridge, loaded via CDN)
+- **lucide-react** (icons)
+
+## Prerequisites
+
+- **Node.js ≥ 18** and **npm**
+- A running **ROS 2** environment with [`rosbridge_server`](https://github.com/RobotWebTools/rosbridge_suite) on port `9090`
+- Camera streams accessible at the configured URLs (default: `http://rov:30001/stream` and `http://rov-cam:30002/stream`)
+
+## Running in Development
+
+```bash
+cd src/webUI/mantaray-control-interface
+npm install
+npm run dev
+```
+
+The dev server starts at `http://localhost:5173`.
+
+## Building for Production
+
+```bash
+cd src/webUI/mantaray-control-interface
+npm install
+npm run build
+# Output is in dist/
+npm run preview   # preview the production build locally
+```
+
+## Configuration
+
+The ROS bridge host can be set from the **System Configuration** page inside the UI. It defaults to `localhost` (or the current hostname if the page is served from the robot). The setting is persisted in the browser's `localStorage` under the key `ros_target_host`.
+
+Camera stream URLs can be edited live from the Dashboard page – each stream panel has an inline URL editor.
+
+## Prototype HTML
+
+A standalone, dependency-free prototype is available at `src/webUI/prototype.html`. Open it directly in a browser (no build step needed) for a lightweight fallback controller.
+
+## Directory Structure
+
+```
+src/webUI/
+├── prototype.html                  # Standalone single-file controller (no build required)
+└── mantaray-control-interface/     # Full React/TypeScript application
+    ├── components/                 # Reusable UI components
+    │   ├── ControlPanel.tsx        # Mission control sidebar (PID + movement)
+    │   ├── CountdownTimer.tsx      # Movement duration countdown
+    │   ├── Header.tsx              # Top navigation bar
+    │   ├── Layout.tsx              # Page layout wrapper
+    │   ├── MovementControl.tsx     # Directional movement buttons
+    │   ├── Navigation.tsx          # Side navigation
+    │   ├── StreamView.tsx          # Camera stream panel
+    │   └── TerminalLogs.tsx        # ROS event/log output
+    ├── context/
+    │   └── RosContext.tsx          # Global ROS connection state
+    ├── hooks/
+    │   └── useStreams.ts           # Camera stream URL management
+    ├── pages/
+    │   ├── DashboardPage.tsx       # Main operational dashboard
+    │   ├── LandingPage.tsx         # Module selection landing page
+    │   ├── SettingsPage.tsx        # Connection & hardware settings
+    │   └── TelemetryPage.tsx       # Sensor telemetry view
+    ├── services/
+    │   └── rosService.ts           # ROS 2 bridge service (topics, connection)
+    ├── App.tsx                     # Root application component
+    ├── index.html                  # HTML entry point
+    ├── index.tsx                   # React entry point
+    ├── types.ts                    # Shared TypeScript types
+    ├── vite.config.ts              # Vite configuration
+    └── package.json                # Dependencies and scripts
+```
