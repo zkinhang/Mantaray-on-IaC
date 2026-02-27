@@ -1,11 +1,5 @@
 import { TwistMessage } from '../types';
-
-// Declare ROSLIB global since we are loading it via CDN in index.html
-declare global {
-  interface Window {
-    ROSLIB: any;
-  }
-}
+import * as ROSLIB from 'roslib';
 
 class RosService {
   private ros: any = null;
@@ -77,13 +71,6 @@ class RosService {
   }
 
   private connect() {
-    // 1. Check for ROSLIB
-    if (!window.ROSLIB) {
-      console.log("[ROS] Waiting for ROSLIB...");
-      setTimeout(() => this.connect(), 500);
-      return;
-    }
-
     // 2. Connection Details
     const targetHost = this.targetHost;
     
@@ -99,7 +86,7 @@ class RosService {
     this.addLog('info', `Initializing ROS Bridge Link: ${url}`);
 
     try {
-      this.ros = new window.ROSLIB.Ros({ url });
+      this.ros = new ROSLIB.Ros({ url });
 
       this.ros.on('connection', () => {
         console.log('[ROS] Connected to websocket server.');
@@ -145,7 +132,7 @@ class RosService {
 
     try {
         // Setup /cmd_vel Publisher
-        this.cmdVelTopic = new window.ROSLIB.Topic({
+        this.cmdVelTopic = new ROSLIB.Topic({
         ros: this.ros,
         name: '/cmd_vel',
         messageType: 'geometry_msgs/Twist'
@@ -157,7 +144,7 @@ class RosService {
         });
 
         // Setup /pid/toggle Subscriber
-        this.pidToggleSub = new window.ROSLIB.Topic({
+        this.pidToggleSub = new ROSLIB.Topic({
         ros: this.ros,
         name: '/pid/toggle',
         messageType: 'std_msgs/Bool'
@@ -169,7 +156,7 @@ class RosService {
         });
 
         // Setup /pid/toggle Publisher
-        this.pidTogglePub = new window.ROSLIB.Topic({
+        this.pidTogglePub = new ROSLIB.Topic({
         ros: this.ros,
         name: '/pid/toggle',
         messageType: 'std_msgs/Bool'
@@ -221,7 +208,7 @@ class RosService {
   public publishTwist(twist: TwistMessage) {
     if (!this.isConnected || !this.cmdVelTopic) return;
     
-    const message = new window.ROSLIB.Message({
+    const message = new ROSLIB.Message({
       linear: twist.linear,
       angular: twist.angular
     });
@@ -237,7 +224,7 @@ class RosService {
   public publishPidToggle(value: boolean) {
     if (!this.isConnected || !this.pidTogglePub) return;
     
-    const message = new window.ROSLIB.Message({
+    const message = new ROSLIB.Message({
       data: value
     });
     
