@@ -31,6 +31,7 @@ The application is modularized within `src/`:
   - `fdilink_ahrs_ROS2`: AHRS/IMU sensor integration.
   - `receiver_pkg`: Translates high-level commands from controller to digital signals to be written to hardware (e.g. grippers).
   - `custom_interfaces`: Domain-specific ROS2 msg/srv definitions.
+- **WebUI Control Interface (`src/webUI/`)**: Offline-first control panel. Uses local fonts, Tailwind CSS, and roslib to operate in air-gapped or restricted network environments.
 - **Hardware Interface (`src/microRos/`)**: Bridge for low-level controllers (ESP32/Teensy).
 - **Streaming (`src/http_streamer/`, `src/webrtc_streamer/`)**: High-performance video streaming nodes. Transitioning from MJPEG over HTTP to WebRTC for lower latency and bandwidth efficiency.
 - **Launch System (`src/launch_file/`)**: Orchestrates node interaction.
@@ -79,6 +80,7 @@ To maintain meticulous order, the project is structured as follows:
 
 ## Debugging and Maintenance
 - **Cluster Diagnostics**: See [references/troubleshooting.md](references/troubleshooting.md).
+- **Network Recovery**: If internet access is lost after switching between eth and wlan, restart the system service: `sudo systemctl restart NetworkManager`.
 - **Hardware Integration**: See [references/hardware.md](references/hardware.md).
 - **ROS2 Packages**: See [references/ros2-packages.md](references/ros2-packages.md).
 
