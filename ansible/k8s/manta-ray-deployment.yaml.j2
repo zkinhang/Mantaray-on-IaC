@@ -250,12 +250,12 @@ spec:
             ros2 launch /ros2_ws/src/launch_file/launch_thruster.py params_file:=/config/params.yaml
         securityContext:
           privileged: true
-          livenessProbe:
+        livenessProbe:
           exec:
-          command:
-          - /bin/bash
-          - -c
-          - "source /ros2_ws/install/setup.bash && ros2 topic echo /imu --once --timeout 2"
+            command:
+            - /bin/bash
+            - -c
+            - "source /ros2_ws/install/setup.bash && ros2 topic echo /imu --once --timeout 2"
           initialDelaySeconds: 30
           periodSeconds: 15
           failureThreshold: 2
