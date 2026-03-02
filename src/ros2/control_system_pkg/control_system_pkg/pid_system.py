@@ -15,31 +15,85 @@ import numpy as np
 class pid_system(Node):
     def __init__(self) -> None:
         super().__init__(node_name='pid_system')
-        # PID Controllers Initialization
-        sample_time = 1 / 20  # Sample time in seconds
-        self.pitch_pid = PID(Kp=1, Ki=0.05, Kd=1, setpoint=0.0, sample_time=sample_time)  # Pitch angle PID
-        self.pitch_pid.output_limits = (-20,20)  # Output limits for pitch PID
+        
+        # Declare parameters
+        self.declare_parameter('sample_time_sec', 0.05)
+        self.declare_parameter('step_time_sec', 0.3)
+        
+        self.declare_parameter('pitch.kp', 1.0)
+        self.declare_parameter('pitch.ki', 0.05)
+        self.declare_parameter('pitch.kd', 1.0)
+        self.declare_parameter('pitch.setpoint', 0.0)
+        self.declare_parameter('pitch.output_limits', [-20.0, 20.0])
 
-        self.yaw_pid = PID(Kp=0.7, Ki=0.01, Kd=0.1, setpoint=0, sample_time=sample_time)  # Yaw angle PID
-        self.yaw_pid.output_limits = (-0, 0)  # Output limits for yaw PID
+        self.declare_parameter('yaw.kp', 0.7)
+        self.declare_parameter('yaw.ki', 0.01)
+        self.declare_parameter('yaw.kd', 0.1)
+        self.declare_parameter('yaw.setpoint', 0.0)
+        self.declare_parameter('yaw.output_limits', [0.0, 0.0])
+
+        self.declare_parameter('roll.kp', 5.0)
+        self.declare_parameter('roll.ki', 0.0)
+        self.declare_parameter('roll.kd', 1.0)
+        self.declare_parameter('roll.setpoint', 0.0)
+        self.declare_parameter('roll.output_limits', [-5.0, 5.0])
+
+        self.declare_parameter('depth.kp', 0.45)
+        self.declare_parameter('depth.ki', 0.008)
+        self.declare_parameter('depth.kd', 7.5)
+        self.declare_parameter('depth.output_limits', [0.0, 50.0])
+
+        # Get parameter values
+        sample_time = self.get_parameter('sample_time_sec').get_parameter_value().double_value
+        self.stepTime = self.get_parameter('step_time_sec').get_parameter_value().double_value
+
+        pitch_kp = self.get_parameter('pitch.kp').get_parameter_value().double_value
+        pitch_ki = self.get_parameter('pitch.ki').get_parameter_value().double_value
+        pitch_kd = self.get_parameter('pitch.kd').get_parameter_value().double_value
+        pitch_setpoint = self.get_parameter('pitch.setpoint').get_parameter_value().double_value
+        pitch_limits = self.get_parameter('pitch.output_limits').get_parameter_value().double_array_value
+
+        yaw_kp = self.get_parameter('yaw.kp').get_parameter_value().double_value
+        yaw_ki = self.get_parameter('yaw.ki').get_parameter_value().double_value
+        yaw_kd = self.get_parameter('yaw.kd').get_parameter_value().double_value
+        yaw_setpoint = self.get_parameter('yaw.setpoint').get_parameter_value().double_value
+        yaw_limits = self.get_parameter('yaw.output_limits').get_parameter_value().double_array_value
+
+        roll_kp = self.get_parameter('roll.kp').get_parameter_value().double_value
+        roll_ki = self.get_parameter('roll.ki').get_parameter_value().double_value
+        roll_kd = self.get_parameter('roll.kd').get_parameter_value().double_value
+        roll_setpoint = self.get_parameter('roll.setpoint').get_parameter_value().double_value
+        roll_limits = self.get_parameter('roll.output_limits').get_parameter_value().double_array_value
+
+        depth_kp = self.get_parameter('depth.kp').get_parameter_value().double_value
+        depth_ki = self.get_parameter('depth.ki').get_parameter_value().double_value
+        depth_kd = self.get_parameter('depth.kd').get_parameter_value().double_value
+        depth_limits = self.get_parameter('depth.output_limits').get_parameter_value().double_array_value
+
+        # PID Controllers Initialization
+        self.pitch_pid = PID(Kp=pitch_kp, Ki=pitch_ki, Kd=pitch_kd, setpoint=pitch_setpoint, sample_time=sample_time)  # Pitch angle PID
+        self.pitch_pid.output_limits = (pitch_limits[0], pitch_limits[1])  # Output limits for pitch PID
+
+        self.yaw_pid = PID(Kp=yaw_kp, Ki=yaw_ki, Kd=yaw_kd, setpoint=yaw_setpoint, sample_time=sample_time)  # Yaw angle PID
+        self.yaw_pid.output_limits = (yaw_limits[0], yaw_limits[1])  # Output limits for yaw PID
 
         # Setpoints for control
         self.setpoint = None
         self.mag_setpoint = None
         self.acc_setpoint = None
 
-        self.roll_pid = PID(Kp=5, Ki=0.0, Kd=1, setpoint=0.0, sample_time=sample_time)  # Roll angle PID
-        self.roll_pid.output_limits = (-5, 5)  # Output limits for roll PID
+        self.roll_pid = PID(Kp=roll_kp, Ki=roll_ki, Kd=roll_kd, setpoint=roll_setpoint, sample_time=sample_time)  # Roll angle PID
+        self.roll_pid.output_limits = (roll_limits[0], roll_limits[1])  # Output limits for roll PID
 
-        self.depth_pid = PID(Kp=0.45, Ki=0.008, Kd=7.5, setpoint=None, sample_time=sample_time)  # Depth PID
-        self.depth_pid.output_limits = (0, 50)  # Output limits for depth PID
+        self.depth_pid = PID(Kp=depth_kp, Ki=depth_ki, Kd=depth_kd, setpoint=None, sample_time=sample_time)  # Depth PID
+        self.depth_pid.output_limits = (depth_limits[0], depth_limits[1])  # Output limits for depth PID
 
         # Positional Data
         self.imu_update_time = time()
         # Timer
         self.timer = self.create_timer(timer_period_sec=sample_time, callback=self.timer_callback)
         self.stopTimer = None
-        self.stepTime = 0.3  # every motion will be 1 second,walk in grid
+        # self.stepTime configured via parameters above
         # Publisher
         self.publishers_cmd: Publisher = self.create_publisher(
             msg_type=Twist,
