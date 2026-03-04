@@ -1,0 +1,85 @@
+import rclpy
+from rclpy.node import Node
+from textual.app import App, ComposeResult
+from textual.widgets import Header, Select, Static
+from textual.containers import Horizontal
+from custom_interfaces.msg import PowerLimit
+
+
+"""Clean Textual UI node that publishes `PowerLimit` messages.
+
+This is a simplified, well-commented copy of `manta_ui_node.py`.
+Use this file to replace the original if you prefer the cleaned comments.
+"""
+
+
+class MantaRayUI(App):
+    """Textual UI to set and publish power limits."""
+
+    CSS = """
+    .control-container { width: 100%; padding: 1; }
+    .label { width: 15; content-align: center middle; }
+    Select { width: 30; }
+    """
+
+    def __init__(self, node: Node):
+        super().__init__()
+        self.node = node
+
+        # Publisher for PowerLimit messages
+        self.set_power_pub = node.create_publisher(PowerLimit, '/controller/power_limit', 10)
+
+        # Preset scales
+        self.POWER_PRESETS = {"LOW": 0.3, "MEDIUM": 0.5, "HIGH": 0.7, "MAX": 1.0}
+
+        self.current_scale = 0.5
+        self.current_axis = "all"
+
+        # Initialize message with default values
+        self.power_limit_msg = PowerLimit()
+        for axis in ['forward', 'rightward', 'upward', 'roll', 'pitch', 'yaw']:
+            setattr(self.power_limit_msg, axis, 0.5)
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+        with Horizontal(classes="control-container"):
+            yield Static("POWER MODE:", classes="label")
+            yield Select([(m, m) for m in self.POWER_PRESETS.keys()], id="power_mode_select", value="MEDIUM")
+            yield Static("TARGET AXIS:", classes="label")
+            yield Select([
+                ("ALL AXES", "all"), ("FORWARD", "forward"), ("RIGHTWARD", "rightward"),
+                ("UPWARD", "upward"), ("ROLL", "roll"), ("PITCH", "pitch"), ("YAW", "yaw")],
+                id="axis_select", value="all")
+
+    def on_select_changed(self, event: Select.Changed) -> None:
+        if event.select.id == "power_mode_select":
+            self.current_scale = self.POWER_PRESETS.get(event.value, 0.5)
+            self.node.get_logger().info(f"Power Level set to {event.value} ({self.current_scale})")
+        elif event.select.id == "axis_select":
+            self.current_axis = event.value
+            self.node.get_logger().info(f"Targeting Axis: {event.value}")
+        self.update_and_publish()
+
+    def update_and_publish(self):
+        if self.current_axis == "all":
+            for axis in ['forward', 'rightward', 'upward', 'roll', 'pitch', 'yaw']:
+                setattr(self.power_limit_msg, axis, self.current_scale)
+        else:
+            if hasattr(self.power_limit_msg, self.current_axis):
+                setattr(self.power_limit_msg, self.current_axis, self.current_scale)
+        self.set_power_pub.publish(self.power_limit_msg)
+        self.node.get_logger().debug(f"Published PowerLimit for axis: {self.current_axis}")
+
+
+def main():
+    rclpy.init()
+    node = Node('manta_ui_node')
+    app = MantaRayUI(node)
+    try:
+        app.run()
+    finally:
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
