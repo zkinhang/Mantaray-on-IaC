@@ -24,6 +24,7 @@ class RosService {
   private cmdVelTopic: any = null;
   private pidToggleSub: any = null;
   private pidTogglePub: any = null;
+  private powerLimitPub: any = null;
 
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -174,6 +175,13 @@ class RosService {
         name: '/pid/toggle',
         messageType: 'std_msgs/Bool'
         });
+
+        // Setup /power_limit Publisher (single float value for global limit)
+        this.powerLimitPub = new window.ROSLIB.Topic({
+          ros: this.ros,
+          name: '/power_limit',
+          messageType: 'std_msgs/Float32'
+        });
     } catch (err) {
         console.error("[ROS] Error setting up topics:", err);
     }
@@ -243,6 +251,22 @@ class RosService {
     
     this.pidTogglePub.publish(message);
     this.addLog('info', `TOPIC [/pid/toggle]: STATE=${value ? 'ENABLED' : 'DISABLED'}`);
+  }
+
+  public publishPowerLimit(value: number) {
+    if (!this.isConnected || !this.powerLimitPub) return;
+
+    const message = new window.ROSLIB.Message({
+      data: value
+    });
+
+    try {
+      this.powerLimitPub.publish(message);
+      this.addLog('info', `TOPIC [/power_limit]: VALUE=${value}`);
+    } catch (err) {
+      console.error('[ROS] Failed publishing power limit', err);
+      this.addLog('error', `Failed to publish /power_limit`);
+    }
   }
 }
 
