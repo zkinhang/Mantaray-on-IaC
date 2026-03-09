@@ -16,6 +16,7 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
   const [error, setError] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [timestamp, setTimestamp] = useState(Date.now());
+<<<<<<< Updated upstream
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -23,6 +24,15 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
   const reconnectTimerRef = useRef<number | null>(null);
   const connectedRef = useRef(false);
   const errorRef = useRef(false);
+=======
+  const [webrtcRetry, setWebrtcRetry] = useState(0);
+  
+  const imgRef = useRef<HTMLImageElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const rtcStreamRef = useRef<MediaStream | null>(null);
+
+  const isWebRtcLocal = url.startsWith('webrtc://local');
+>>>>>>> Stashed changes
 
   // When URL changes, reset state and timestamp
   useEffect(() => {
@@ -37,7 +47,66 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
     setTempUrl(url);
   }, [url]);
 
+  useEffect(() => {
+    if (!isWebRtcLocal) {
+      if (rtcStreamRef.current) {
+        rtcStreamRef.current.getTracks().forEach(track => track.stop());
+        rtcStreamRef.current = null;
+      }
+      return;
+    }
+
+    let cancelled = false;
+
+    const connectWebRtcLocal = async () => {
+      try {
+        const queryString = url.includes('?') ? url.slice(url.indexOf('?') + 1) : '';
+        const params = new URLSearchParams(queryString);
+        const deviceId = params.get('deviceId');
+        const constraints: MediaStreamConstraints = {
+          video: deviceId ? { deviceId: { exact: deviceId } } : true,
+          audio: false
+        };
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (cancelled) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
+        rtcStreamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+
+        setIsConnected(true);
+        setError(false);
+        addLog('success', `STREAM [${title}]: WebRTC sample link established`);
+      } catch (e) {
+        console.error('WebRTC local sample failed:', e);
+        setIsConnected(false);
+        setError(true);
+        addLog('error', `STREAM [${title}]: WebRTC sample failed. Check camera permission/source.`);
+      }
+    };
+
+    connectWebRtcLocal();
+
+    return () => {
+      cancelled = true;
+      if (rtcStreamRef.current) {
+        rtcStreamRef.current.getTracks().forEach(track => track.stop());
+        rtcStreamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [isWebRtcLocal, url, title, addLog, webrtcRetry]);
+
   const handleSnapshot = useCallback(() => {
+<<<<<<< Updated upstream
     if (!videoRef.current) return;
     try {
       const canvas = document.createElement('canvas');
@@ -46,6 +115,31 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(videoRef.current, 0, 0);
+=======
+    if (!imgRef.current && !videoRef.current) return;
+    try {
+      const canvas = document.createElement('canvas');
+      const sourceWidth = isWebRtcLocal
+        ? (videoRef.current?.videoWidth || 0)
+        : (imgRef.current?.naturalWidth || 0);
+      const sourceHeight = isWebRtcLocal
+        ? (videoRef.current?.videoHeight || 0)
+        : (imgRef.current?.naturalHeight || 0);
+
+      if (!sourceWidth || !sourceHeight) {
+        return;
+      }
+
+      canvas.width = sourceWidth;
+      canvas.height = sourceHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        if (isWebRtcLocal && videoRef.current) {
+          ctx.drawImage(videoRef.current, 0, 0);
+        } else if (imgRef.current) {
+          ctx.drawImage(imgRef.current, 0, 0);
+        }
+>>>>>>> Stashed changes
         const dataUrl = canvas.toDataURL('image/png');
         const link = document.createElement('a');
         link.download = `mantaray_${id}_${new Date().toISOString()}.png`;
@@ -58,7 +152,7 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
       console.error("Snapshot failed:", e);
       alert("Snapshot failed. CORS headers required.");
     }
-  }, [id]);
+  }, [id, isWebRtcLocal]);
 
   const handleSaveUrl = useCallback(() => {
     onUrlChange(id, tempUrl);
@@ -79,9 +173,16 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
     setTimestamp(Date.now());
     setIsConnected(false);
     setError(false);
+<<<<<<< Updated upstream
     connectedRef.current = false;
     errorRef.current = false;
   }, []);
+=======
+    if (isWebRtcLocal) {
+      setWebrtcRetry(prev => prev + 1);
+    }
+  }, [isWebRtcLocal]);
+>>>>>>> Stashed changes
 
   useEffect(() => {
     if (!url) return undefined;
@@ -264,6 +365,7 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
           </div>
         ) : null}
 
+<<<<<<< Updated upstream
         <video 
           ref={videoRef}
           autoPlay
@@ -271,6 +373,26 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
           muted
           className={`w-full h-full object-contain transition-opacity duration-500 ${isConnected ? 'opacity-100' : 'opacity-0'}`}
         />
+=======
+        {isWebRtcLocal ? (
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className={`w-full h-full object-contain transition-opacity duration-500 ${isConnected ? 'opacity-100' : 'opacity-0'}`}
+          />
+        ) : (
+          <img 
+            ref={imgRef}
+            src={streamUrl}
+            alt={`${title} Stream`}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+            className={`w-full h-full object-contain transition-opacity duration-500 ${isConnected ? 'opacity-100' : 'opacity-0'}`}
+          />
+        )}
+>>>>>>> Stashed changes
         
         {/* Overlay Info */}
         <div className="absolute top-3 right-3 flex flex-col items-end space-y-1 z-20">

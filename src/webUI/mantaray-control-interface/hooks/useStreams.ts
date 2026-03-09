@@ -16,7 +16,11 @@ export const useStreams = () => {
     {
       id: 'rov-cam-feed',
       title: 'ROV-CAM Camera Feed',
+<<<<<<< Updated upstream
       url: 'ws://rov:9000?stream=rov-cam'
+=======
+      url: 'webrtc://local'
+>>>>>>> Stashed changes
     }
   ]);
 
