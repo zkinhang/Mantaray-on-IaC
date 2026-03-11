@@ -136,28 +136,19 @@ if __name__ == "__main__":
         print("Error: No compatible thruster board found. Check hardware.")
         sys.exit(1)
 
-    try:
-        mode_desc = f"ALL THRUSTERS" if args.thruster == 0 else f"THRUSTER {args.thruster}"
-        print(f"Starting test for {mode_desc} at power {args.power}. Press Ctrl+C to terminate.")
+    mode_desc = f"ALL THRUSTERS" if args.thruster == 0 else f"THRUSTER {args.thruster}"
+    print(f"Starting test for {mode_desc} at power {args.power}. Press Ctrl+C to terminate.")
+    
+    while True:
+        test_array = np.zeros(8)
+        if args.thruster == 0:
+            # All-Active Mode: Deploy full force across the board
+            test_array = np.ones(8) * args.power
+        else:
+            # Targeted Mode: Test individual unit
+            test_array[args.thruster - 1] = args.power
         
-        while True:
-            test_array = np.zeros(8)
-            if args.thruster == 0:
-                # All-Active Mode: Deploy full force across the board
-                test_array = np.ones(8) * args.power
-            else:
-                # Targeted Mode: Test individual unit
-                test_array[args.thruster - 1] = args.power
-            
-            board.set_Thruster(test_array)
-            time.sleep(0.05) # Maintain stable 20Hz heartbeat
-            
-    except KeyboardInterrupt:
-        # User requested exit - ensure safety stop
-        board.stop_all()
-        print("User interrupt detected. Test suite finished.")
-    except Exception as e:
-        print(f"Unexpected Runtime Error: {e}")
-        board.stop_all()
-    finally:
-        sys.exit(0)
+        print(f"Testing thruster {args.thruster} at {args.power} power")
+        data = board.set_Thruster(test_array)
+        print(data)
+    
