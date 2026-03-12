@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Activity } from 'lucide-react';
-
+import { createRoot } from 'react-dom/client';
 declare global {
   interface Window {
     ROSLIB: any;
@@ -29,7 +28,7 @@ const AXES: { key: AxisKey; label: string }[] = [
 ];
 
 export const TelemetryPage: React.FC = () => {
-  const [globalLimit, setGlobalLimit] = useState<number | null>(null);
+  const [globalLimit, setGlobalLimit] = useState<number>(0.5);
   const [axisLimits, setAxisLimits] = useState<Record<AxisKey, number>>(() => {
     const initial = {} as Record<AxisKey, number>;
     AXES.forEach((a) => (initial[a.key] = 0.5));
@@ -60,32 +59,6 @@ export const TelemetryPage: React.FC = () => {
 
     ros.on && ros.on('connection', () => {
       console.info('[TelemetryPage] ROS connected', url);
-
-      // Subscribe to a global power limit topic if present
-      try {
-        const globalTopic = new window.ROSLIB.Topic({
-          ros,
-          name: '/power_limit',
-          messageType: 'std_msgs/Float32'
-        });
-
-        globalTopic.subscribe((msg: { data: number }) => {
-          const v = Number(msg?.data ?? 0);
-          setGlobalLimit(v);
-          // initialize axis limits to global if they are unset or null
-          setAxisLimits((prev) => {
-            const next = { ...prev } as Record<AxisKey, number>;
-            AXES.forEach((a) => {
-              if (next[a.key] === undefined || next[a.key] === null) next[a.key] = v;
-            });
-            return next;
-          });
-        });
-
-        subsRef.current.push(globalTopic);
-      } catch (err) {
-        console.warn('[TelemetryPage] Failed subscribe /power_limit', err);
-      }
     });
 
     ros.on && ros.on('error', (e: any) => console.warn('[TelemetryPage] ROS error', e));
@@ -129,45 +102,41 @@ export const TelemetryPage: React.FC = () => {
     }
   };
 
-  const setAllFromGlobal = () => {
-    if (globalLimit == null) return;
-    const next = { ...axisLimits };
+  const applyGlobalLimit = () => {
+    const next = {} as Record<AxisKey, number>;
     AXES.forEach((a) => (next[a.key] = globalLimit));
     setAxisLimits(next);
+    AXES.forEach((a) => publishAxis(a.key, globalLimit));
   };
 
   return (
-    <div className="h-full grid grid-cols-1 lg:grid-cols-12 gap-4">
-      <div className="lg:col-span-8">
-        <div className="h-full flex items-center justify-center border-2 border-dashed border-k3s-border rounded-lg bg-k3s-block">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-k3s-dark rounded-full flex items-center justify-center mx-auto mb-4 border border-k3s-primary/50 text-k3s-primary">
-              <Activity size={32} />
-            </div>
-            <h2 className="text-2xl font-bold mb-2 text-white">Telemetry View</h2>
-            <p className="text-k3s-muted italic">Advanced telemetry metrics coming soon...</p>
-          </div>
-        </div>
-      </div>
+    <div className="h-full">
+      <aside className="space-y-4 h-full">
 
-      <aside className="lg:col-span-4 space-y-4">
-        <div className="bg-k3s-block border border-k3s-border rounded p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-white">Global Power Limit</h3>
-            <div className="text-xs text-k3s-muted">{globalLimit == null ? '—' : globalLimit.toFixed(2)}</div>
+        {/* Global Power Limit — 25% larger than axis cards (h-35 vs h-28, text-3xl vs text-2xl) */}
+        <div className="bg-k3s-block border-2 border-k3s-primary rounded p-4 flex flex-col justify-between h-[8.75rem]">
+          <div>
+            <div className="text-sm font-bold text-k3s-primary mb-1 tracking-wide uppercase">Global Power Limit</div>
+            <div className="flex items-baseline gap-2">
+              <div className="font-mono text-3xl text-white">{globalLimit.toFixed(2)}</div>
+              <div className="text-xs text-k3s-muted">/ 1.0 — applies to all axes</div>
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={globalLimit}
+              onChange={(e) => setGlobalLimit(Number(e.target.value))}
+              className="flex-1"
+            />
             <button
-              className="flex-1 py-2 rounded bg-k3s-primary text-white text-sm"
-              onClick={() => setAllFromGlobal()}
+              onClick={applyGlobalLimit}
+              className="ml-2 px-3 py-1.5 rounded bg-k3s-primary text-white text-sm font-semibold"
             >
-              Apply Global To All
-            </button>
-            <button
-              className="py-2 px-3 rounded bg-k3s-block border border-k3s-border text-k3s-muted text-sm"
-              onClick={() => console.info('Open advanced...')}
-            >
-              Advanced
+              Set All
             </button>
           </div>
         </div>
