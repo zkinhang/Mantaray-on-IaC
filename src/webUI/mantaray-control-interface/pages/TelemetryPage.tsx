@@ -140,7 +140,7 @@ export const TelemetryPage: React.FC = () => {
         </div>
 
         {/* ── Per-Axis Power Limits ── */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3"> /* Good Thing(should use), but can be improved with dynamic column count based on screen width , by Louis*/
           {AXES.map((a) => (
             <div key={a.key} className="bg-k3s-block border border-k3s-border rounded p-3 flex flex-col gap-1.5">
               <div className="text-xs font-semibold text-white">{a.label}</div>
