@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Camera Test</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: monospace;
+            background: #111;
+            color: #f5f5f5;
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+        }
+
+        main {
+            width: min(960px, calc(100vw - 32px));
+        }
+
+        video {
+            width: 100%;
+            background: #000;
+            border: 1px solid #333;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        input, button {
+            font: inherit;
+            padding: 10px 12px;
+            border: 1px solid #333;
+            background: #1d1d1d;
+            color: inherit;
+        }
+
+        input {
+            flex: 1;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            background: #1d1d1d;
+            border: 1px solid #333;
+            padding: 12px;
+            min-height: 72px;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="controls">
+            <input id="signal-url" value="http://rov.local:8080/offer" />
+            <button id="connect">Connect</button>
+        </div>
+        <video id="remote-video" autoplay playsinline controls muted></video>
+        <pre id="status">Idle</pre>
+    </main>
+
+    <script>
+        const connectButton = document.getElementById("connect");
+        const signalUrlInput = document.getElementById("signal-url");
+        const remoteVideo = document.getElementById("remote-video");
+        const statusBox = document.getElementById("status");
+
+        let peerConnection;
+
+        function setStatus(message) {
+            statusBox.textContent = message;
+        }
+
+        async function connect() {
+            connectButton.disabled = true;
+            setStatus("Creating RTCPeerConnection...");
+
+            if (peerConnection) {
+                peerConnection.close();
+            }
+
+            peerConnection = new RTCPeerConnection();
+            peerConnection.addTransceiver("video", { direction: "recvonly" });
+
+            peerConnection.ontrack = (event) => {
+                const [stream] = event.streams;
+                remoteVideo.srcObject = stream;
+                setStatus("Remote video track attached.");
+            };
+
+            peerConnection.onconnectionstatechange = () => {
+                setStatus(`Connection state: ${peerConnection.connectionState}`);
+            };
+
+            try {
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                setStatus("Sending SDP offer...");
+                const response = await fetch(signalUrlInput.value, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        sdp: peerConnection.localDescription.sdp,
+                        type: peerConnection.localDescription.type,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Signal server returned ${response.status}`);
+                }
+
+                const answer = await response.json();
+                await peerConnection.setRemoteDescription(answer);
+                setStatus("SDP answer applied. Waiting for video...");
+            } catch (error) {
+                setStatus(`Connection failed: ${error.message}`);
+                connectButton.disabled = false;
+                return;
+            }
+
+            connectButton.disabled = false;
+        }
+
+        connectButton.addEventListener("click", connect);
+    </script>
+</body>
+</html>
