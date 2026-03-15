@@ -87,6 +87,9 @@ COPY --from=builder /ros2_ws/install ./install
 # Copy the other launch files to run directly in src
 COPY --from=builder /ros2_ws/src/launch_file /ros2_ws/src/launch_file
 
+# Copy standalone WebRTC streamer script for direct python execution
+COPY --from=builder /ros2_ws/src/http_streamer/webrtc_streamer.py /ros2_ws/webrtc_streamer.py
+
 # Copy the microros folder
 # COPY --from=builder /ros2_ws/src/microRos /ros2_ws/src/microRos
 
