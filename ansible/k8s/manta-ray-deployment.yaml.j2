@@ -186,23 +186,24 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: http-streamer-b-deployment
+  name: webrtc-streamer-b-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: http-streamer-b
+      app: webrtc-streamer-b
   template:
     metadata:
       labels:
-        app: http-streamer-b
+        app: webrtc-streamer-b
     spec:
+      hostNetwork: true
       nodeSelector:
         ros2-hardware: rov-camera
       containers:
-      - name: http-streamer-b-container
+      - name: webrtc-streamer-b-container
         image: "{{ main_ros_image }}"
-        args: ["httpStreamer"]
+        command: ["python3", "webrtc_streamer.py", "--device", "/dev/video1", "--port", "8081"]
         securityContext:
           privileged: true
         volumeMounts:

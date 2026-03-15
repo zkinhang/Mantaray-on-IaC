@@ -143,7 +143,7 @@ export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onU
         ) : null}
 
         <video
-          id={id === 'rov-feed' ? 'camA' : `cam-${id}`}
+          id={id === 'rov-feed' ? 'camA' : id === 'rov-cam-feed' ? 'camB' : `cam-${id}`}
           ref={videoRef}
           autoPlay
           playsInline
