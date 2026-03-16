@@ -4,6 +4,7 @@ import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TelemetryPage } from './pages/TelemetryPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { SyncMapConfiguratorPage } from './pages/SyncMapConfiguratorPage';
 import { useStreams } from './hooks/useStreams';
 
 const App: React.FC = () => {
@@ -27,6 +28,8 @@ const App: React.FC = () => {
         return <TelemetryPage />;
       case 'settings':
         return <SettingsPage />;
+      case 'syncmap':
+        return <SyncMapConfiguratorPage />;
       default:
         return <LandingPage onPageChange={setCurrentPage} />;
     }

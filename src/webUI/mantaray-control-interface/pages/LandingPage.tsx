@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Settings, LayoutDashboard } from 'lucide-react';
+import { Activity, Settings, LayoutDashboard, MapPinned } from 'lucide-react';
 
 interface LandingPageProps {
   onPageChange: (id: string) => void;
@@ -24,6 +24,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPageChange }) => {
       label: 'System Configuration', 
       icon: Settings,
       details: 'Hardware Parameters & Network'
+    },
+    {
+      id: 'syncmap',
+      label: 'SyncMap Configurator',
+      icon: MapPinned,
+      details: 'mapping configuration, enjoy'
     }
   ];
 

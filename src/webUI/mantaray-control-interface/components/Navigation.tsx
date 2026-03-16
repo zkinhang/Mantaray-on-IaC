@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Activity, Settings, X, Home } from 'lucide-react';
+import { LayoutDashboard, Activity, Settings, X, Home, MapPinned } from 'lucide-react';
 
 interface NavigationProps {
   currentPage: string;
@@ -13,6 +13,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
     { id: 'landing', label: 'Home', icon: Home },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'telemetry', label: 'Telemetry', icon: Activity },
+    { id: 'syncmap', label: 'SyncMap Configurator', icon: MapPinned },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

@@ -94,8 +94,8 @@ class ThrusterBoard:
 # Run this script directly for standalone thruster testing
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test individual thrusters')
-    parser.add_argument('thruster', type=int, choices=range(1, 9),
-                       help='Thruster number (1-8) to test')
+    parser.add_argument('thruster', type=int, choices=range(0, 9),
+                       help='Thruster number (1-8) to test, or 0 for ALL')
     parser.add_argument('--power', type=float, default=0.3,
                        help='Power level (0-1), default 0.3')
     args = parser.parse_args()
@@ -118,11 +118,13 @@ if __name__ == "__main__":
         exit(1)
 
     while True:
-        # Create test array with all zeros except selected thruster
         test_array = np.zeros(8)
-        test_array[args.thruster - 1] = args.power
-        # for i in range(8):
-        #         test_array[i] = args.power
+        if args.thruster == 0:
+            # All Start: apply same power to all 8 thrusters
+            test_array[:] = args.power
+        else:
+            # Single thruster test
+            test_array[args.thruster - 1] = args.power
 
         print(f"Testing thruster {args.thruster} at {args.power} power")
         data = board.set_Thruster(test_array)

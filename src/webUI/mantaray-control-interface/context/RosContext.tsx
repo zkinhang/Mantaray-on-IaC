@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { rosService } from '../services/rosService';
+import type { PowerAxisKey, PinnedPowerLimit } from '../types';
 
 interface LogEntry {
   type: 'info' | 'warn' | 'error' | 'success';
@@ -13,9 +14,11 @@ interface RosContextType {
   recentHosts: string[];
   logs: LogEntry[];
   pidOn: boolean;
+  pinnedLimits: Partial<Record<PowerAxisKey, PinnedPowerLimit>>;
   updateTargetHost: (host: string) => void;
   addLog: (type: 'info' | 'warn' | 'error' | 'success', message: string) => void;
   togglePid: (status: boolean) => void;
+  setPinnedLimit: (axis: PowerAxisKey, data: PinnedPowerLimit | null) => void;
 }
 
 const RosContext = createContext<RosContextType | undefined>(undefined);
@@ -26,6 +29,22 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [recentHosts, setRecentHosts] = useState(rosService.getRecentHosts());
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [pidOn, setPidOn] = useState(true);
+  const [pinnedLimits, setPinnedLimitsState] = useState<Partial<Record<PowerAxisKey, PinnedPowerLimit>>>(() => {
+    try {
+      const stored = localStorage.getItem('mantaray_pinned_limits');
+      return stored ? JSON.parse(stored) : {};
+    } catch { return {}; }
+  });
+
+  const setPinnedLimit = (axis: PowerAxisKey, data: PinnedPowerLimit | null) => {
+    setPinnedLimitsState((prev) => {
+      const next = { ...prev };
+      if (data === null) delete next[axis];
+      else next[axis] = data;
+      localStorage.setItem('mantaray_pinned_limits', JSON.stringify(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     const unsubStatus = rosService.subscribeStatus((connected) => {
@@ -62,7 +81,7 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   return (
-    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, updateTargetHost, addLog, togglePid }}>
+    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, pinnedLimits, updateTargetHost, addLog, togglePid, setPinnedLimit }}>
       {children}
     </RosContext.Provider>
   );
