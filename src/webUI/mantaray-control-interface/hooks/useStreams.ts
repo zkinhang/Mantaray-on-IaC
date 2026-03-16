@@ -16,7 +16,7 @@ export const useStreams = () => {
     {
       id: 'rov-cam-feed',
       title: 'ROV-CAM Camera Feed',
-      url: 'http://rov-cam:8081/offer'
+      url: 'http://rov-cam:8080/offer'
     }
   ]);
 

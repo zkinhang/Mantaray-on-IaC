@@ -27,7 +27,7 @@ def parse_device(device: str) -> int | str:
 
 
 class CameraSource:
-    def __init__(self, device: int | str, width: int = 1280, height: int = 720, fps: int = 30) -> None:
+    def __init__(self, device: int | str, width: int = 1280, height: int = 960, fps: int = 60) -> None:
         self.device = device
         self.width = width
         self.height = height
