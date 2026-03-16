@@ -83,7 +83,11 @@
             }
 
             peerConnection = new RTCPeerConnection();
-            peerConnection.addTransceiver("video", { direction: "recvonly" });
+            peerConnection.addTransceiver(
+                "video", 
+                { direction: "recvonly", 
+                sendEncodings: [{ maxBitrate: 8000000 }]}
+            );
 
             peerConnection.ontrack = (event) => {
                 const [stream] = event.streams;
