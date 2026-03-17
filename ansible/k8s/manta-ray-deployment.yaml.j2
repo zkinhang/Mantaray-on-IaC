@@ -244,13 +244,22 @@ spec:
       - name: thrusterboard-container
         image: "{{ main_ros_image }}" 
         command: ["/bin/bash", "-c"]
-
         args:
           - >
             source install/setup.bash && 
             ros2 launch /ros2_ws/src/launch_file/launch_thruster.py params_file:=/config/params.yaml
         securityContext:
           privileged: true
+        livenessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - "source /ros2_ws/install/setup.bash && ros2 topic echo /imu --once --timeout 2"
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 2
+          timeoutSeconds: 4
         volumeMounts:
         - name: serial-port
           mountPath: /dev
