@@ -31,6 +31,7 @@ The application is modularized within `src/`:
   - `fdilink_ahrs_ROS2`: AHRS/IMU sensor integration.
   - `receiver_pkg`: Translates high-level commands from controller to digital signals to be written to hardware (e.g. grippers).
   - `custom_interfaces`: Domain-specific ROS2 msg/srv definitions.
+  - `pid_system`: Advanced stabilization logic (recently updated with enhanced gains and derivative filtering).
 - **WebUI Control Interface (`src/webUI/`)**: Offline-first control panel. Uses local fonts, Tailwind CSS, and roslib to operate in air-gapped or restricted network environments.
 - **Hardware Interface (`src/microRos/`)**: Bridge for low-level controllers (ESP32/Teensy).
 - **Streaming (`src/http_streamer/`, `src/webrtc_streamer/`)**: High-performance video streaming nodes. Transitioning from MJPEG over HTTP to WebRTC for lower latency and bandwidth efficiency.
