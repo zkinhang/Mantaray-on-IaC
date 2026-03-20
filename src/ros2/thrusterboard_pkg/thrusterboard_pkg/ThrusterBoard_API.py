@@ -138,17 +138,25 @@ if __name__ == "__main__":
 
     mode_desc = f"ALL THRUSTERS" if args.thruster == 0 else f"THRUSTER {args.thruster}"
     print(f"Starting test for {mode_desc} at power {args.power}. Press Ctrl+C to terminate.")
-    
-    while True:
-        test_array = np.zeros(8)
-        if args.thruster == 0:
-            # All-Active Mode: Deploy full force across the board
-            test_array = np.ones(8) * args.power
-        else:
-            # Targeted Mode: Test individual unit
-            test_array[args.thruster - 1] = args.power
-        
-        print(f"Testing thruster {args.thruster} at {args.power} power")
-        data = board.set_Thruster(test_array)
-        print(data)
-    
+
+    try:
+        while True:
+            test_array = np.zeros(8)
+            if args.thruster == 0:
+                # All-Active Mode: Deploy full force across the board
+                test_array = np.ones(8) * args.power
+            else:
+                # Targeted Mode: Test individual unit
+                test_array[args.thruster - 1] = args.power
+
+            print(f"Testing thruster {args.thruster} at {args.power} power")
+            data = board.set_Thruster(test_array)
+            print(data)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+    finally:
+        board.stop_all()
+        board.ser.close()
+        print("Serial port closed.")
