@@ -203,7 +203,7 @@ spec:
       containers:
       - name: webrtc-streamer-b-container
         image: "{{ main_ros_image }}"
-        command: ["python3", "webrtc_streamer.py", "--device", "/dev/video1", "--port", "8081"]
+        command: ["python3", "webrtc_streamer.py", "--device", "/dev/video1", "--port", "8080"]
         securityContext:
           privileged: true
         volumeMounts:
