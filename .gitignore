@@ -33,7 +33,7 @@ __pycache__/
 
 # IDE settings
 **/.vscode/
-**/.github
+**/.github/skills/
 **/.agent*
 **/.cursor
 
