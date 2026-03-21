@@ -11,9 +11,9 @@ interface NavigationProps {
 export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChange, isOpen, onClose }) => {
   const navItems = [
     { id: 'landing', label: 'Home', icon: Home },
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Primary Dashboard (for pilot team)', icon: LayoutDashboard },
     { id: 'telemetry', label: 'Telemetry', icon: Activity },
-    { id: 'syncmap', label: 'SyncMap Configurator', icon: MapPinned },
+    { id: 'syncmap', label: 'Causality: One-Veneration Configurator (Mapping)', icon: MapPinned },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

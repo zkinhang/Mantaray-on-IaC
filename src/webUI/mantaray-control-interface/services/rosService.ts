@@ -1,4 +1,13 @@
-import { TwistMessage } from '../types';
+import type { PowerAxisKey, TwistMessage } from '../types';
+
+const AXIS_TOPICS: Record<PowerAxisKey, string[]> = {
+  forward: ['forward'],
+  backward: ['backward'],
+  vertical: ['upward', 'downward'],
+  yaw: ['yaw_left', 'yaw_right'],
+  lateral: ['leftward', 'rightward'],
+  view: ['camera/top', 'camera/bottom'],
+};
 
 // Declare ROSLIB global since we are loading it via CDN in index.html
 declare global {
@@ -266,6 +275,28 @@ class RosService {
     } catch (err) {
       console.error('[ROS] Failed publishing power limit', err);
       this.addLog('error', `Failed to publish /power_limit`);
+    }
+  }
+
+  public publishAxisPowerLimit(axis: PowerAxisKey, value: number) {
+    if (!this.isConnected || !this.ros || !window.ROSLIB) return;
+
+    const suffixes = AXIS_TOPICS[axis];
+    if (!suffixes) return;
+
+    try {
+      suffixes.forEach((suffix) => {
+        const topic = new window.ROSLIB.Topic({
+          ros: this.ros,
+          name: `/power_limit/${suffix}`,
+          messageType: 'std_msgs/Float32',
+        });
+        topic.publish(new window.ROSLIB.Message({ data: Number(value) }));
+      });
+      this.addLog('info', `TOPIC [/power_limit/${axis}]: VALUE=${value.toFixed(2)}`);
+    } catch (err) {
+      console.error('[ROS] Failed publishing axis power limit', axis, err);
+      this.addLog('error', `Failed to publish /power_limit for axis ${axis}`);
     }
   }
 }

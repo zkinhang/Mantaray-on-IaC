@@ -1,11 +1,35 @@
 ﻿import React, { memo } from 'react';
-import { Activity, Power, ShieldAlert, Pin } from 'lucide-react';
+import { Activity, Power, ShieldAlert } from 'lucide-react';
 import { MovementControl } from './MovementControl';
 import { useRos } from '../context/RosContext';
+import { rosService } from '../services/rosService';
+import type { PinnedPowerLimit, PowerAxisKey } from '../types';
+
+const POWER_LEVELS: { label: string; value: number }[] = [
+  { label: 'LOW', value: 0.3 },
+  { label: 'MED', value: 0.5 },
+  { label: 'HIGH', value: 0.7 },
+  { label: 'MAX', value: 1.0 },
+];
+
+const AXIS_ORDER: PowerAxisKey[] = ['forward', 'backward', 'vertical', 'yaw', 'lateral', 'view'];
 
 export const ControlPanel: React.FC = memo(() => {
   const { pidOn, togglePid, pinnedLimits, setPinnedLimit } = useRos();
-  const pinnedEntries = Object.entries(pinnedLimits) as [string, { axisLabel: string; levelLabel: string; value: number }][];
+  const pinnedEntries = Object.entries(pinnedLimits)
+    .filter((entry): entry is [PowerAxisKey, PinnedPowerLimit] => Boolean(entry[1]))
+    .sort((a, b) => AXIS_ORDER.indexOf(a[0]) - AXIS_ORDER.indexOf(b[0]));
+  const activeEntry = pinnedEntries[0] ?? null;
+
+  const setPinnedAxisLevel = (axis: PowerAxisKey, pin: PinnedPowerLimit, value: number) => {
+    const nextLevel = POWER_LEVELS.find((item) => Math.abs(item.value - value) < 0.001)?.label ?? 'CUSTOM';
+    rosService.publishAxisPowerLimit(axis, value);
+    setPinnedLimit(axis, {
+      ...pin,
+      levelLabel: nextLevel,
+      value,
+    });
+  };
 
   return (
     <div className="bg-k3s-block border-2 border-k3s-border p-4 flex flex-col h-full shadow-2xl min-h-0 overflow-hidden">
@@ -41,34 +65,56 @@ export const ControlPanel: React.FC = memo(() => {
 
         </div>
 
-        {/* Pilot Reference Control (PRC) — pinned power limits */}
+        {/* Pilot Follow Axis (Auto-follow latest telemetry axis) */}
         <div className="space-y-2 pb-4">
           <div className="flex items-center gap-2 text-sm font-bold text-k3s-primary uppercase tracking-wider border-b border-k3s-border pb-2">
-            <Pin className="w-4 h-4" />
-            <span>PRC</span>
+            <Activity className="w-4 h-4" />
+            <span>Causality Guiding Axis</span>
           </div>
-          {pinnedEntries.length === 0 ? (
+          {!activeEntry ? (
             <p className="text-xs text-k3s-muted italic">
-              No limits pinned — go to Telemetry and pin an axis.
+              No recent axis update yet — adjust any axis in Telemetry, Pilot will auto-follow it.
             </p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {pinnedEntries.map(([axis, pin]) => (
+            <div className="grid grid-cols-1 gap-2">
+              {(() => {
+                const [axis, pin] = activeEntry;
+                return (
                 <div
                   key={axis}
-                  className="flex items-center gap-1 bg-k3s-dark border border-k3s-border rounded px-2 py-0.5"
+                  className="bg-k3s-dark border border-k3s-border rounded px-2 py-2"
                 >
-                  <span className="text-xs text-white font-semibold">{pin.axisLabel}</span>
-                  <span className="text-xs text-k3s-primary font-bold">{pin.levelLabel}</span>
-                  <button
-                    title="Unpin"
-                    onClick={() => setPinnedLimit(axis as any, null)}
-                    className="ml-0.5 text-k3s-muted hover:text-red-400 transition-colors"
-                  >
-                    <Pin className="w-2.5 h-2.5" fill="currentColor" />
-                  </button>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-white font-semibold">{pin.axisLabel}</span>
+                      <span className="text-[10px] text-k3s-primary font-bold">{pin.levelLabel}</span>
+                      <span className="text-[10px] text-k3s-muted font-mono">{pin.value.toFixed(2)}</span>
+                    </div>
+                    <span className="text-[10px] text-k3s-muted uppercase tracking-wide">Auto-follow</span>
+                  </div>
+
+                  <div className="mt-2 flex gap-1">
+                    {POWER_LEVELS.map((lvl) => {
+                      const active = Math.abs(pin.value - lvl.value) < 0.001;
+                      return (
+                        <button
+                          key={`${axis}-${lvl.value}`}
+                          onClick={() => setPinnedAxisLevel(axis, pin, lvl.value)}
+                          className={[
+                            'flex-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border transition-colors',
+                            active
+                              ? 'bg-k3s-primary text-white border-k3s-primary'
+                              : 'bg-k3s-block border-k3s-border text-k3s-muted hover:text-white hover:border-k3s-primary',
+                          ].join(' ')}
+                        >
+                          {lvl.value.toFixed(1)}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              ))}
+                );
+              })()}
             </div>
           )}
         </div>

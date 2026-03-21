@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Pin } from 'lucide-react';
 import { useRos } from '../context/RosContext';
 import type { PowerAxisKey } from '../types';
 
@@ -69,7 +68,7 @@ const PowerButtons: React.FC<PowerButtonsProps> = ({ currentValue, onSelect, siz
 );
 
 export const TelemetryPage: React.FC = () => {
-  const { pinnedLimits, setPinnedLimit } = useRos();
+  const { setPinnedLimit } = useRos();
   const [globalLevel, setGlobalLevel] = useState<number>(0.5);
   const [axisLimits, setAxisLimits] = useState<Record<AxisKey, number>>(() => {
     const init = {} as Record<AxisKey, number>;
@@ -115,6 +114,13 @@ export const TelemetryPage: React.FC = () => {
   const setAxisPower = (axis: AxisKey, value: number) => {
     setAxisLimits((prev) => ({ ...prev, [axis]: value }));
     AXIS_TOPICS[axis].forEach((suffix) => publishFloat(suffix, value));
+    const axisLabel = AXES.find((entry) => entry.key === axis)?.label ?? axis;
+    const levelLabel = POWER_LEVELS.find((item) => Math.abs(item.value - value) < 0.001)?.label ?? 'CUSTOM';
+    AXES.forEach((entry) => setPinnedLimit(entry.key, entry.key === axis ? {
+      axisLabel,
+      levelLabel,
+      value,
+    } : null));
     console.info(`[TelemetryPage] ${axis} → ${value}`);
   };
 
@@ -144,50 +150,18 @@ export const TelemetryPage: React.FC = () => {
         </div>
 
         {/* ── Per-Axis Power Limits ── */}
-        <div className="grid grid-cols-2 gap-3"> /* Good Thing(should use), but can be improved with dynamic column count based on screen width , by Louis*/
+        <div className="grid grid-cols-2 gap-3">
           {AXES.map((a) => {
-            const pinned = pinnedLimits[a.key];
-            const currentLevelLabel = POWER_LEVELS.find(
-              (l) => Math.abs(axisLimits[a.key] - l.value) < 0.001
-            )?.label ?? '—';
             return (
             <div key={a.key} className="bg-k3s-block border border-k3s-border rounded p-3 flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold text-white">{a.label}</div>
-                <button
-                  title={pinned ? 'Unpin from Pilot Panel' : 'Pin to Pilot Panel'}
-                  onClick={() =>
-                    setPinnedLimit(
-                      a.key,
-                      pinned
-                        ? null
-                        : { axisLabel: a.label, levelLabel: currentLevelLabel, value: axisLimits[a.key] }
-                    )
-                  }
-                  className={[
-                    'p-0.5 rounded transition-colors',
-                    pinned
-                      ? 'text-k3s-primary'
-                      : 'text-k3s-muted hover:text-white',
-                  ].join(' ')}
-                >
-                  <Pin className="w-3 h-3" fill={pinned ? 'currentColor' : 'none'} />
-                </button>
-              </div>
+              <div className="text-xs font-semibold text-white">{a.label}</div>
               <div className="flex items-baseline gap-1">
                 <span className="font-mono text-2xl text-white">{axisLimits[a.key].toFixed(2)}</span>
                 <span className="text-xs text-k3s-muted">/ 1.0</span>
               </div>
               <PowerButtons
                 currentValue={axisLimits[a.key]}
-                onSelect={(v) => {
-                  setAxisPower(a.key, v);
-                  // auto-update pin value if this axis is already pinned
-                  if (pinned) {
-                    const lbl = POWER_LEVELS.find((l) => Math.abs(v - l.value) < 0.001)?.label ?? '—';
-                    setPinnedLimit(a.key, { axisLabel: a.label, levelLabel: lbl, value: v });
-                  }
-                }}
+                onSelect={(v) => setAxisPower(a.key, v)}
                 size="sm"
               />
             </div>
