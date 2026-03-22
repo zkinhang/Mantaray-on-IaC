@@ -88,6 +88,7 @@ To maintain meticulous order, the project is structured as follows:
 ### Useful Scripts
 - `scripts/debug_info.sh`: Quick overview of cluster health and pod status.
 - `scripts/get_params.sh`: Fetches current ConfigMap values for `robot_params`.
+- `src/ros2/thrusterboard_pkg/thrusterboard_pkg/ThrusterBoard_API.py`: Standalone thruster testing utility. Now supports `--mapping` CLI arguments to test custom hardware mappings directly.
 
 ## Best Practices
 - **Network Interfaces**: Use `playbook-network-switch.yaml` when migrating between Wi-Fi and Ethernet.
