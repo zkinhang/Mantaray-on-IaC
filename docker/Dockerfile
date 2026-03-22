@@ -87,6 +87,10 @@ COPY --from=builder /ros2_ws/install ./install
 # Copy the other launch files to run directly in src
 COPY --from=builder /ros2_ws/src/launch_file /ros2_ws/src/launch_file
 
+# Copy the ThrusterBoard API for thruster mapping
+COPY --from=builder /ros2_ws/src/ros2/thrusterboard_pkg/thrusterboard_pkg/ThrusterBoard_API.py /ros2_ws/src/ThrusterBoard_API.py
+
+
 # Copy the microros folder
 # COPY --from=builder /ros2_ws/src/microRos /ros2_ws/src/microRos
 
