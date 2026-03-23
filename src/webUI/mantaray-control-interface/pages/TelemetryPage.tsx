@@ -7,6 +7,23 @@ declare global {
   }
 }
 
+// StatusIndicator Component - inline for consistency
+const StatusIndicator: React.FC<{ active: boolean; label?: string; size?: 'sm' | 'md'; showText?: boolean; className?: string }> = ({
+  active,
+  label,
+  size = 'md',
+  showText = true,
+  className = '',
+}) => {
+  const sizeClass = size === 'sm' ? 'w-1.5 h-1.5' : 'w-2 h-2';
+  return (
+    <div className={`flex items-center gap-1 ${className}`}>
+      <div className={`rounded-full ${sizeClass} transition-all ${active ? 'bg-k3s-primary ring-2 ring-k3s-primary/50 animate-pulse' : 'bg-k3s-muted'}`} />
+      {showText && label && <span className="text-xs text-k3s-muted">{label}</span>}
+    </div>
+  );
+};
+
 // Combined axis keys — upward/downward → vertical, yaw_left/yaw_right → yaw, leftward/rightward → lateral, top/bottom camera → view
 type AxisKey = 'forward' | 'backward' | 'vertical' | 'yaw' | 'lateral' | 'view';
 
@@ -40,28 +57,41 @@ interface PowerButtonsProps {
   currentValue: number;
   onSelect: (v: number) => void;
   size?: 'sm' | 'md';
+  showProgressBar?: boolean;
 }
 
-const PowerButtons: React.FC<PowerButtonsProps> = ({ currentValue, onSelect, size = 'md' }) => (
-  <div className="flex gap-1.5">
-    {POWER_LEVELS.map((lvl) => {
-      const active = Math.abs(currentValue - lvl.value) < 0.001;
-      return (
-        <button
-          key={lvl.label}
-          onClick={() => onSelect(lvl.value)}
-          className={[
-            'flex-1 rounded font-semibold transition-colors',
-            size === 'sm' ? 'px-1 py-0.5 text-xs' : 'px-2 py-1 text-sm',
-            active
-              ? 'bg-k3s-primary text-white ring-1 ring-white'
-              : 'bg-k3s-block border border-k3s-border text-k3s-muted hover:border-k3s-primary hover:text-white',
-          ].join(' ')}
-        >
-          {lvl.label}
-        </button>
-      );
-    })}
+const PowerButtons: React.FC<PowerButtonsProps> = ({ currentValue, onSelect, size = 'md', showProgressBar = false }) => (
+  <div className="flex flex-col gap-2">
+    <div className="flex gap-1.5">
+      {POWER_LEVELS.map((lvl) => {
+        const active = Math.abs(currentValue - lvl.value) < 0.001;
+        return (
+          <button
+            key={lvl.label}
+            onClick={() => onSelect(lvl.value)}
+            className={[
+              'flex-1 rounded font-semibold transition-all relative overflow-hidden border-2',
+              size === 'sm' ? 'px-1 py-0.5 text-xs' : 'px-2 py-1 text-sm',
+              active
+                ? 'bg-k3s-primary/20 border-k3s-primary text-k3s-primary shadow-lg shadow-k3s-primary/20'
+                : 'bg-k3s-block border-transparent text-k3s-muted hover:text-white hover:shadow-lg',
+            ].join(' ')}
+          >
+            <span>{lvl.label}</span>
+            {size === 'md' && <span className="block text-xs text-k3s-muted">{lvl.value.toFixed(1)}</span>}
+            {active && <StatusIndicator active size="sm" showText={false} className="absolute top-1 right-1" />}
+          </button>
+        );
+      })}
+    </div>
+    {showProgressBar && (
+      <div className="w-full h-1.5 rounded-full bg-k3s-border overflow-hidden">
+        <div
+          className="h-full rounded-full bg-k3s-primary transition-all duration-300"
+          style={{ width: `${currentValue * 100}%` }}
+        />
+      </div>
+    )}
   </div>
 );
 
@@ -124,37 +154,86 @@ export const TelemetryPage: React.FC = () => {
   };
 
   return (
-    <div className="h-full">
-      <aside className="space-y-4 h-full">
+    <div className="h-full bg-k3s-bg">
+      <aside className="space-y-4 h-full p-4">
 
-        {/* ── Global Power Limit ── */}
-        <div className="bg-k3s-block border-2 border-k3s-primary rounded p-4">
-          <div className="text-sm font-bold text-k3s-primary mb-1 tracking-wide uppercase">
-            Global Power Limit
+        {/* ── Global Power Limit Section ── */}
+        <div className="bg-k3s-block border-2 border-k3s-border p-4 space-y-3 shadow-2xl">
+          <div className="flex items-center space-x-2 pb-2 border-b-2 border-k3s-border">
+            <div className="w-3 h-3 rounded-full bg-k3s-primary animate-pulse" />
+            <div className="text-sm font-bold text-k3s-primary tracking-wide uppercase">Global Power Limit</div>
           </div>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="font-mono text-3xl text-white">{globalLevel.toFixed(2)}</span>
-            <span className="text-xs text-k3s-muted">/ 1.0 — applies to all axes</span>
+
+          {/* Current Value Display */}
+          <div className="flex items-baseline gap-2 bg-k3s-border/20 rounded px-3 py-2">
+            <span className="font-mono text-3xl font-bold text-white">{globalLevel.toFixed(2)}</span>
+            <span className="text-xs text-k3s-muted">/ 1.0</span>
           </div>
-          <PowerButtons currentValue={globalLevel} onSelect={applyGlobalLimit} />
+
+          {/* Progress Bar */}
+          <div className="w-full h-2 rounded-full bg-k3s-border overflow-hidden">
+            <div
+              className="h-full rounded-full bg-k3s-primary transition-all duration-300 shadow-lg shadow-k3s-primary/50"
+              style={{ width: `${globalLevel * 100}%` }}
+            />
+          </div>
+
+          {/* Power Buttons */}
+          <div className="flex gap-1.5">
+            {POWER_LEVELS.map((lvl) => {
+              const active = Math.abs(globalLevel - lvl.value) < 0.001;
+              return (
+                <button
+                  key={lvl.label}
+                  onClick={() => applyGlobalLimit(lvl.value)}
+                  className={[
+                    'flex-1 flex flex-col items-center rounded font-semibold transition-all relative overflow-hidden py-2 px-1 border-2',
+                    active
+                      ? 'bg-k3s-primary/20 border-k3s-primary text-k3s-primary shadow-lg shadow-k3s-primary/20'
+                      : 'bg-k3s-block border-transparent text-k3s-muted hover:text-white hover:shadow-lg',
+                  ].join(' ')}
+                >
+                  <span className="text-xs font-bold">{lvl.label}</span>
+                  <span className="text-xs text-k3s-muted">{lvl.value.toFixed(1)}</span>
+                  {active && <StatusIndicator active size="sm" showText={false} className="absolute top-1 right-1" />}
+                </button>
+              );
+            })}
+          </div>
+
         </div>
 
         {/* ── Per-Axis Power Limits ── */}
-        <div className="grid grid-cols-2 gap-3">
-          {AXES.map((a) => (
-            <div key={a.key} className="bg-k3s-block border border-k3s-border rounded p-3 flex flex-col gap-1.5">
-              <div className="text-xs font-semibold text-white">{a.label}</div>
-              <div className="flex items-baseline gap-1">
-                <span className="font-mono text-2xl text-white">{axisLimits[a.key].toFixed(2)}</span>
-                <span className="text-xs text-k3s-muted">/ 1.0</span>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2 text-xs font-bold text-k3s-primary tracking-wide uppercase px-1 border-b border-k3s-border pb-2">
+            <div className="w-2 h-2 rounded-full bg-k3s-primary" />
+            Individual Axis Controls
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {AXES.map((a) => (
+              <div key={a.key} className="bg-k3s-block border-2 border-k3s-border p-3 space-y-2 shadow-lg transition-all hover:border-k3s-primary/40">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold text-white tracking-tight uppercase">{a.label}</div>
+                  <span className="font-mono text-lg font-bold text-k3s-primary">{axisLimits[a.key].toFixed(2)}</span>
+                </div>
+                
+                {/* Small Progress Bar */}
+                <div className="w-full h-1.5 rounded-full bg-k3s-border overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-k3s-primary transition-all duration-300"
+                    style={{ width: `${axisLimits[a.key] * 100}%` }}
+                  />
+                </div>
+
+                <PowerButtons
+                  currentValue={axisLimits[a.key]}
+                  onSelect={(v) => setAxisPower(a.key, v)}
+                  size="sm"
+                  showProgressBar={false}
+                />
               </div>
-              <PowerButtons
-                currentValue={axisLimits[a.key]}
-                onSelect={(v) => setAxisPower(a.key, v)}
-                size="sm"
-              />
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
       </aside>
