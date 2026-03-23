@@ -1,11 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-
-declare global {
-  interface Window {
-    ROSLIB: any;
-  }
-}
+import React, { useState } from 'react';
+import { rosService } from '../services/rosService';
 
 // StatusIndicator Component - inline for consistency
 const StatusIndicator: React.FC<{ active: boolean; label?: string; size?: 'sm' | 'md'; showText?: boolean; className?: string }> = ({
@@ -24,8 +18,17 @@ const StatusIndicator: React.FC<{ active: boolean; label?: string; size?: 'sm' |
   );
 };
 
-// Combined axis keys — upward/downward → vertical, yaw_left/yaw_right → yaw, leftward/rightward → lateral, top/bottom camera → view
-type AxisKey = 'forward' | 'backward' | 'vertical' | 'yaw' | 'lateral' | 'view';
+// PowerLimit message structure matching ROS custom_interfaces/PowerLimit
+interface PowerLimitMsg {
+  forward: number;
+  rightward: number;
+  upward: number;
+  roll: number;
+  pitch: number;
+  yaw: number;
+}
+
+type AxisKey = keyof PowerLimitMsg;
 
 const POWER_LEVELS: { label: string; value: number }[] = [
   { label: 'LOW',  value: 0.3 },
@@ -34,23 +37,13 @@ const POWER_LEVELS: { label: string; value: number }[] = [
   { label: 'MAX',  value: 1.0 },
 ];
 
-// Maps each combined key to the underlying ROS topic suffixes it controls
-const AXIS_TOPICS: Record<AxisKey, string[]> = {
-  forward:  ['forward'],
-  backward: ['backward'],
-  vertical: ['upward', 'downward'],
-  yaw:      ['yaw_left', 'yaw_right'],
-  lateral:  ['leftward', 'rightward'],
-  view:     ['camera/top', 'camera/bottom'],
-};
-
 const AXES: { key: AxisKey; label: string }[] = [
-  { key: 'forward',  label: 'Forward'         },
-  { key: 'backward', label: 'Backward'         },
-  { key: 'vertical', label: 'Up / Down'        },
-  { key: 'yaw',      label: 'Yaw'              },
-  { key: 'lateral',  label: 'Lateral'          },
-  { key: 'view',     label: 'Top / Bot Camera' },
+  { key: 'forward',   label: 'Forward' },
+  { key: 'rightward', label: 'Rightward' },
+  { key: 'upward',    label: 'Upward' },
+  { key: 'roll',      label: 'Roll' },
+  { key: 'pitch',     label: 'Pitch' },
+  { key: 'yaw',       label: 'Yaw' },
 ];
 
 interface PowerButtonsProps {
@@ -62,7 +55,7 @@ interface PowerButtonsProps {
 
 const PowerButtons: React.FC<PowerButtonsProps> = ({ currentValue, onSelect, size = 'md', showProgressBar = false }) => (
   <div className="flex flex-col gap-2">
-    <div className="flex gap-1.5">
+    <div className="flex gap-2">
       {POWER_LEVELS.map((lvl) => {
         const active = Math.abs(currentValue - lvl.value) < 0.001;
         return (
@@ -70,15 +63,15 @@ const PowerButtons: React.FC<PowerButtonsProps> = ({ currentValue, onSelect, siz
             key={lvl.label}
             onClick={() => onSelect(lvl.value)}
             className={[
-              'flex-1 rounded font-semibold transition-all relative overflow-hidden border-2',
-              size === 'sm' ? 'px-1 py-0.5 text-xs' : 'px-2 py-1 text-sm',
+              'flex-1 rounded font-semibold transition-all relative overflow-hidden border-2 flex flex-col items-center justify-center',
+              size === 'sm' ? 'py-1.5 px-1 text-xs min-h-10' : 'py-2.5 px-1.5 text-sm min-h-14',
               active
                 ? 'bg-k3s-primary/20 border-k3s-primary text-k3s-primary shadow-lg shadow-k3s-primary/20'
                 : 'bg-k3s-block border-transparent text-k3s-muted hover:text-white hover:shadow-lg',
             ].join(' ')}
           >
-            <span>{lvl.label}</span>
-            {size === 'md' && <span className="block text-xs text-k3s-muted">{lvl.value.toFixed(1)}</span>}
+            <span className="font-bold">{lvl.label}</span>
+            {size === 'md' && <span className="text-xs text-k3s-muted">{lvl.value.toFixed(1)}</span>}
             {active && <StatusIndicator active size="sm" showText={false} className="absolute top-1 right-1" />}
           </button>
         );
@@ -96,77 +89,56 @@ const PowerButtons: React.FC<PowerButtonsProps> = ({ currentValue, onSelect, siz
 );
 
 export const TelemetryPage: React.FC = () => {
-  const [globalLevel, setGlobalLevel] = useState<number>(0.5);
-  const [axisLimits, setAxisLimits] = useState<Record<AxisKey, number>>(() => {
-    const init = {} as Record<AxisKey, number>;
-    AXES.forEach((a) => (init[a.key] = 0.5));
-    return init;
+  const [powerLimit, setPowerLimit] = useState<PowerLimitMsg>({
+    forward: 0.5,
+    rightward: 0.5,
+    upward: 0.5,
+    roll: 0.5,
+    pitch: 0.5,
+    yaw: 0.5,
   });
-  const rosRef = useRef<any | null>(null);
 
-  const targetHost = useMemo(() => {
-    return (
-      localStorage.getItem('ros_target_host') ||
-      (window.location.hostname.includes('mantaray') || window.location.hostname.includes('rov')
-        ? window.location.hostname
-        : 'localhost')
-    );
-  }, []);
+  const [globalLevel, setGlobalLevel] = useState<number>(0.5);
 
-  useEffect(() => {
-    if (!window.ROSLIB) return;
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const ros = new window.ROSLIB.Ros({ url: `${protocol}://${targetHost}:9090` });
-    rosRef.current = ros;
-    ros.on?.('connection', () => console.info('[TelemetryPage] ROS connected'));
-    ros.on?.('error',      (e: any) => console.warn('[TelemetryPage] ROS error', e));
-    ros.on?.('close',      () => console.info('[TelemetryPage] ROS closed'));
-    return () => {
-      try { ros.close?.(); } catch {}
-      rosRef.current = null;
-    };
-  }, [targetHost]);
-
-  const publishFloat = (suffix: string, value: number) => {
-    const ros = rosRef.current;
-    if (!ros || !window.ROSLIB) return;
-    try {
-      const topic = new window.ROSLIB.Topic({ ros, name: `/power_limit/${suffix}`, messageType: 'std_msgs/Float32' });
-      topic.publish(new window.ROSLIB.Message({ data: Number(value) }));
-    } catch (err) {
-      console.warn('[TelemetryPage] publishFloat failed', suffix, err);
-    }
+  const publishPowerLimit = (msg: PowerLimitMsg) => {
+    rosService.publishPowerLimit(msg);
   };
 
   const setAxisPower = (axis: AxisKey, value: number) => {
-    setAxisLimits((prev) => ({ ...prev, [axis]: value }));
-    AXIS_TOPICS[axis].forEach((suffix) => publishFloat(suffix, value));
+    const updated = { ...powerLimit, [axis]: value };
+    setPowerLimit(updated);
+    publishPowerLimit(updated);
     console.info(`[TelemetryPage] ${axis} → ${value}`);
   };
 
   const applyGlobalLimit = (value: number) => {
     setGlobalLevel(value);
-    const next = {} as Record<AxisKey, number>;
-    AXES.forEach((a) => { next[a.key] = value; });
-    setAxisLimits(next);
-    AXES.forEach((a) => AXIS_TOPICS[a.key].forEach((suffix) => publishFloat(suffix, value)));
+    const updated: PowerLimitMsg = {
+      forward: value,
+      rightward: value,
+      upward: value,
+      roll: value,
+      pitch: value,
+      yaw: value,
+    };
+    setPowerLimit(updated);
+    publishPowerLimit(updated);
     console.info(`[TelemetryPage] global → ${value}`);
   };
 
   return (
-    <div className="h-full bg-k3s-bg">
-      <aside className="space-y-4 h-full p-4">
+    <div className="h-full bg-k3s-bg flex items-center justify-center p-4">
+      <aside className="space-y-6 h-full w-full max-w-6xl overflow-y-auto">
 
         {/* ── Global Power Limit Section ── */}
-        <div className="bg-k3s-block border-2 border-k3s-border p-4 space-y-3 shadow-2xl">
-          <div className="flex items-center space-x-2 pb-2 border-b-2 border-k3s-border">
-            <div className="w-3 h-3 rounded-full bg-k3s-primary animate-pulse" />
+        <div className="bg-gradient-to-br from-k3s-block to-k3s-block/80 border-2 border-k3s-primary/40 p-4 space-y-3 shadow-2xl rounded-lg">
+          <div className="flex items-center space-x-2 pb-3 border-b-2 border-k3s-primary/30">
             <div className="text-sm font-bold text-k3s-primary tracking-wide uppercase">Global Power Limit</div>
           </div>
 
           {/* Current Value Display */}
-          <div className="flex items-baseline gap-2 bg-k3s-border/20 rounded px-3 py-2">
-            <span className="font-mono text-3xl font-bold text-white">{globalLevel.toFixed(2)}</span>
+          <div className="flex items-center justify-between gap-2 bg-k3s-border/20 rounded px-3 py-2">
+            <span className="font-mono text-3xl font-bold text-k3s-primary">{globalLevel.toFixed(2)}</span>
             <span className="text-xs text-k3s-muted">/ 1.0</span>
           </div>
 
@@ -178,8 +150,8 @@ export const TelemetryPage: React.FC = () => {
             />
           </div>
 
-          {/* Power Buttons */}
-          <div className="flex gap-1.5">
+          {/* Power Buttons - 4 in a row */}
+          <div className="flex gap-3">
             {POWER_LEVELS.map((lvl) => {
               const active = Math.abs(globalLevel - lvl.value) < 0.001;
               return (
@@ -187,50 +159,68 @@ export const TelemetryPage: React.FC = () => {
                   key={lvl.label}
                   onClick={() => applyGlobalLimit(lvl.value)}
                   className={[
-                    'flex-1 flex flex-col items-center rounded font-semibold transition-all relative overflow-hidden py-2 px-1 border-2',
+                    'flex-1 flex flex-col items-center justify-center rounded font-semibold transition-all relative overflow-hidden py-3 px-2 border-2 min-h-16',
                     active
                       ? 'bg-k3s-primary/20 border-k3s-primary text-k3s-primary shadow-lg shadow-k3s-primary/20'
-                      : 'bg-k3s-block border-transparent text-k3s-muted hover:text-white hover:shadow-lg',
+                      : 'bg-k3s-block border-k3s-border/50 text-k3s-muted hover:text-white hover:border-k3s-primary/50 hover:shadow-lg',
                   ].join(' ')}
                 >
-                  <span className="text-xs font-bold">{lvl.label}</span>
-                  <span className="text-xs text-k3s-muted">{lvl.value.toFixed(1)}</span>
-                  {active && <StatusIndicator active size="sm" showText={false} className="absolute top-1 right-1" />}
+                  <span className="text-base font-bold">{lvl.label}</span>
+                  <span className="text-xs text-k3s-muted mt-0.5">{lvl.value.toFixed(1)}</span>
+                  {active && <StatusIndicator active size="sm" showText={false} className="absolute top-2 right-2" />}
                 </button>
               );
             })}
           </div>
-
         </div>
 
         {/* ── Per-Axis Power Limits ── */}
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2 text-xs font-bold text-k3s-primary tracking-wide uppercase px-1 border-b border-k3s-border pb-2">
-            <div className="w-2 h-2 rounded-full bg-k3s-primary" />
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2 text-sm font-bold text-k3s-primary tracking-wide uppercase px-1 border-b-2 border-k3s-primary/30 pb-2">
             Individual Axis Controls
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {AXES.map((a) => (
-              <div key={a.key} className="bg-k3s-block border-2 border-k3s-border p-3 space-y-2 shadow-lg transition-all hover:border-k3s-primary/40">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold text-white tracking-tight uppercase">{a.label}</div>
-                  <span className="font-mono text-lg font-bold text-k3s-primary">{axisLimits[a.key].toFixed(2)}</span>
+              <div 
+                key={a.key} 
+                className="bg-gradient-to-br from-k3s-block to-k3s-block/70 border-2 border-k3s-border/50 p-3 space-y-2 shadow-lg rounded transition-all hover:border-k3s-primary/40 hover:shadow-xl"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-bold text-white tracking-tight uppercase">{a.label}</div>
+                  <span className="font-mono text-base font-bold text-k3s-primary flex-shrink-0">{powerLimit[a.key].toFixed(2)}</span>
                 </div>
                 
-                {/* Small Progress Bar */}
+                {/* Progress Bar */}
                 <div className="w-full h-1.5 rounded-full bg-k3s-border overflow-hidden">
                   <div
                     className="h-full rounded-full bg-k3s-primary transition-all duration-300"
-                    style={{ width: `${axisLimits[a.key] * 100}%` }}
+                    style={{ width: `${powerLimit[a.key] * 100}%` }}
                   />
                 </div>
 
-                <PowerButtons
-                  currentValue={axisLimits[a.key]}
-                  onSelect={(v) => setAxisPower(a.key, v)}
-                  size="sm"
-                  showProgressBar={false}
-                />
+                {/* Power Buttons - 4 in a row, more compact */}
+                <div className="flex gap-2">
+                  {POWER_LEVELS.map((lvl) => {
+                    const active = Math.abs(powerLimit[a.key] - lvl.value) < 0.001;
+                    return (
+                      <button
+                        key={lvl.label}
+                        onClick={() => setAxisPower(a.key, lvl.value)}
+                        className={[
+                          'flex-1 rounded font-semibold transition-all relative overflow-hidden border-2 flex flex-col items-center justify-center py-2 px-0.5 text-xs min-h-12',
+                          active
+                            ? 'bg-k3s-primary/20 border-k3s-primary text-k3s-primary shadow-md shadow-k3s-primary/20'
+                            : 'bg-k3s-block border-k3s-border/40 text-k3s-muted hover:text-white hover:border-k3s-primary/40 hover:shadow-md',
+                        ].join(' ')}
+                      >
+                        <span className="font-bold text-xs">{lvl.label}</span>
+                        <span className="text-xs text-k3s-muted">{lvl.value.toFixed(1)}</span>
+                        {active && <StatusIndicator active size="sm" showText={false} className="absolute top-1 right-1" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             ))}
           </div>

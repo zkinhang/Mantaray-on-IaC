@@ -176,11 +176,11 @@ class RosService {
         messageType: 'std_msgs/Bool'
         });
 
-        // Setup /power_limit Publisher (single float value for global limit)
+        // Setup /controller/power_limit Publisher (PowerLimit message)
         this.powerLimitPub = new window.ROSLIB.Topic({
           ros: this.ros,
-          name: '/power_limit',
-          messageType: 'std_msgs/Float32'
+          name: '/controller/power_limit',
+          messageType: 'custom_interfaces/PowerLimit'
         });
     } catch (err) {
         console.error("[ROS] Error setting up topics:", err);
@@ -253,19 +253,17 @@ class RosService {
     this.addLog('info', `TOPIC [/pid/toggle]: STATE=${value ? 'ENABLED' : 'DISABLED'}`);
   }
 
-  public publishPowerLimit(value: number) {
+  public publishPowerLimit(powerLimit: { forward: number; rightward: number; upward: number; roll: number; pitch: number; yaw: number }) {
     if (!this.isConnected || !this.powerLimitPub) return;
 
-    const message = new window.ROSLIB.Message({
-      data: value
-    });
+    const message = new window.ROSLIB.Message(powerLimit);
 
     try {
       this.powerLimitPub.publish(message);
-      this.addLog('info', `TOPIC [/power_limit]: VALUE=${value}`);
+      this.addLog('info', `TOPIC [/controller/power_limit]: forward=${powerLimit.forward.toFixed(2)} rightward=${powerLimit.rightward.toFixed(2)} upward=${powerLimit.upward.toFixed(2)} roll=${powerLimit.roll.toFixed(2)} pitch=${powerLimit.pitch.toFixed(2)} yaw=${powerLimit.yaw.toFixed(2)}`);
     } catch (err) {
       console.error('[ROS] Failed publishing power limit', err);
-      this.addLog('error', `Failed to publish /power_limit`);
+      this.addLog('error', `Failed to publish /controller/power_limit`);
     }
   }
 }
