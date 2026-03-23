@@ -291,12 +291,6 @@ spec:
           value: "SUBNET"
         securityContext:
           privileged: true
-        {# livenessProbe:
-          exec:
-            command:
-            - /bin/bash
-            - -c
-            - "source /ros2_ws/install/setup.bash && ros2 topic echo /imu --once --timeout 3" #}
           initialDelaySeconds: 30
           periodSeconds: 15
           failureThreshold: 3
