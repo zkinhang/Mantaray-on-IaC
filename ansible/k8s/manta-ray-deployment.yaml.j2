@@ -256,6 +256,14 @@ spec:
           readOnly: true
         - name: thrusterboard-api-source
           mountPath: "{{ path_thrusterboard_mounting }}"
+        livenessProbe:
+          exec:
+            command: ["/bin/bash", "-c", "source /ros2_ws/install/setup.bash && ros2 topic list | grep -q /imu"]
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
 ---
 apiVersion: apps/v1
 kind: Deployment
