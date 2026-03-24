@@ -27,6 +27,9 @@ spec:
         # Grant privileges to access host devices
         securityContext:
           privileged: true
+        env:
+        - name: ROS_DOMAIN_ID
+          value: "0"
         volumeMounts:
         - name: dev-input
           mountPath: /dev/input
@@ -69,6 +72,9 @@ spec:
         command: ["/bin/bash", "-c"]
         args:
           - "source /ros2_ws/install/setup.bash && ros2 run receiver_pkg decomposer --ros-args --params-file /config/params.yaml"
+        env:
+        - name: ROS_DOMAIN_ID
+          value: "0"
         volumeMounts:
         - name: parameter-volume
           mountPath: /config
@@ -98,6 +104,9 @@ spec:
       - name: foxglove-bridge-container
         image: "{{ main_ros_image }}"
         args: ["ros2", "launch", "foxglove_bridge", "foxglove_bridge_launch.xml", "port:=8765"]
+        env:
+        - name: ROS_DOMAIN_ID
+          value: "0"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -115,6 +124,7 @@ spec:
     spec:
       # hostNetwork is useful for simplicity in Mode A/B networking
       hostNetwork: true 
+      hostIPC: true
       nodeSelector:
         # Deploying on the same node as Foxglove for consistency
         ros2-hardware: land-pc 
@@ -123,6 +133,9 @@ spec:
         image: "{{ main_ros_image }}"
         # Launching rosbridge_server specifically
         args: ["ros2", "launch", "rosbridge_server", "rosbridge_websocket_launch.xml", "delay_between_messages:=0.0"]
+        env:
+        - name: ROS_DOMAIN_ID
+          value: "0"
         ports:
         - containerPort: 9090
           name: websocket
@@ -149,6 +162,9 @@ spec:
       - name: msg-converter-container
         image: "{{ main_ros_image }}"
         args: ["ros2", "run", "control_system_pkg", "msg_converter"]
+        env:
+        - name: ROS_DOMAIN_ID
+          value: "0"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -170,6 +186,9 @@ spec:
       - name: http-streamer-a-container
         image: "{{ main_ros_image }}"
         args: ["httpStreamer"]
+        env:
+        - name: ROS_DOMAIN_ID
+          value: "0"
         securityContext:
           privileged: true
         volumeMounts:
@@ -200,6 +219,9 @@ spec:
       - name: http-streamer-b-container
         image: "{{ main_ros_image }}"
         args: ["httpStreamer"]
+        env:
+        - name: ROS_DOMAIN_ID
+          value: "0"
         securityContext:
           privileged: true
         volumeMounts:
@@ -246,6 +268,9 @@ spec:
           - >
             source install/setup.bash && 
             ros2 launch /ros2_ws/src/launch_file/launch_thruster.py params_file:=/config/params.yaml
+        env:
+        - name: ROS_DOMAIN_ID
+          value: "0"
         securityContext:
           privileged: true
         volumeMounts:
@@ -258,7 +283,7 @@ spec:
           mountPath: "{{ path_thrusterboard_mounting }}"
         livenessProbe:
           exec:
-            command: ["/bin/bash", "-c", "source /ros2_ws/install/setup.bash && ros2 topic list | grep -q /imu"]
+            command: ["/bin/bash", "-c", "source /ros2_ws/install/setup.bash && ros2 topic hz /imu | grep -v 'average rate: 0.000'"]
           initialDelaySeconds: 30
           periodSeconds: 15
           timeoutSeconds: 10
@@ -293,6 +318,9 @@ spec:
       containers:
       - name: pid-system-container
         image: "{{ main_ros_image }}"
+        env:
+        - name: ROS_DOMAIN_ID
+          value: "0"
         volumeMounts:
         - name: dev-input
           mountPath: "{{ path_imu }}"
@@ -331,6 +359,9 @@ spec:
       - name: microros-agent-container
         image: "{{ microros_image }}"
         imagePullPolicy: Always
+        env:
+        - name: ROS_DOMAIN_ID
+          value: "0"
         securityContext:
           privileged: true
         volumeMounts:
