@@ -117,10 +117,12 @@ export const TelemetryPage: React.FC = () => {
   };
 
   const setAxisPower = (axis: AxisKey, value: number) => {
-    const updated = { ...powerLimit, [axis]: value };
-    setPowerLimit(updated);
-    publishPowerLimit(updated);
-    console.info(`[TelemetryPage] ${axis} → ${value}`);
+    setPowerLimit((prev) => {
+      const updated: PowerLimitMsg = { ...prev, [axis]: value };
+      publishPowerLimit(updated);
+      console.info(`[TelemetryPage] ${axis} → ${value}`);
+      return updated;
+    });
   };
 
   const applyGlobalLimit = (value: number) => {
