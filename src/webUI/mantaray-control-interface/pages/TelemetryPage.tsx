@@ -46,48 +46,6 @@ const AXES: { key: AxisKey; label: string }[] = [
   { key: 'yaw',       label: 'Yaw' },
 ];
 
-interface PowerButtonsProps {
-  currentValue: number;
-  onSelect: (v: number) => void;
-  size?: 'sm' | 'md';
-  showProgressBar?: boolean;
-}
-
-const PowerButtons: React.FC<PowerButtonsProps> = ({ currentValue, onSelect, size = 'md', showProgressBar = false }) => (
-  <div className="flex flex-col gap-2">
-    <div className="flex gap-2">
-      {POWER_LEVELS.map((lvl) => {
-        const active = Math.abs(currentValue - lvl.value) < 0.001;
-        return (
-          <button
-            key={lvl.label}
-            onClick={() => onSelect(lvl.value)}
-            className={[
-              'flex-1 rounded font-semibold transition-all relative overflow-hidden border-2 flex flex-col items-center justify-center',
-              size === 'sm' ? 'py-1.5 px-1 text-xs min-h-10' : 'py-2.5 px-1.5 text-sm min-h-14',
-              active
-                ? 'bg-k3s-primary/20 border-k3s-primary text-k3s-primary shadow-lg shadow-k3s-primary/20'
-                : 'bg-k3s-block border-transparent text-k3s-muted hover:text-white hover:shadow-lg',
-            ].join(' ')}
-          >
-            <span className="font-bold">{lvl.label}</span>
-            {size === 'md' && <span className="text-xs text-k3s-muted">{lvl.value.toFixed(1)}</span>}
-            {active && <StatusIndicator active size="sm" showText={false} className="absolute top-1 right-1" />}
-          </button>
-        );
-      })}
-    </div>
-    {showProgressBar && (
-      <div className="w-full h-1.5 rounded-full bg-k3s-border overflow-hidden">
-        <div
-          className="h-full rounded-full bg-k3s-primary transition-all duration-300"
-          style={{ width: `${currentValue * 100}%` }}
-        />
-      </div>
-    )}
-  </div>
-);
-
 export const TelemetryPage: React.FC = () => {
   const [powerLimit, setPowerLimit] = useState<PowerLimitMsg>({
     forward: 0.5,
