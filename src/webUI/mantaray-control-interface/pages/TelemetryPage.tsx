@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { rosService } from '../services/rosService';
 
 // StatusIndicator Component - inline for consistency
@@ -99,6 +99,18 @@ export const TelemetryPage: React.FC = () => {
   });
 
   const [globalLevel, setGlobalLevel] = useState<number>(0.5);
+
+  // Subscribe to power limit updates from ROS channel
+  useEffect(() => {
+    const unsubscribe = rosService.subscribePowerLimit((receivedPowerLimit) => {
+      console.log('[TelemetryPage] Received power limit update:', receivedPowerLimit);
+      setPowerLimit(receivedPowerLimit);
+      // Update global level to match the first axis (or average if you prefer)
+      setGlobalLevel(receivedPowerLimit.forward);
+    });
+
+    return unsubscribe;
+  }, []);
 
   const publishPowerLimit = (msg: PowerLimitMsg) => {
     rosService.publishPowerLimit(msg);
