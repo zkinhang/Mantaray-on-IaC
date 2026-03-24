@@ -22,6 +22,15 @@ import {
   WifiOff,
 } from "lucide-react";
 
+type PilotPanelMode = "all-except-yaw" | "yaw-function";
+
+const POWER_PRESETS = [
+  { label: "LOW", value: 0.3 },
+  { label: "MED", value: 0.5 },
+  { label: "HIGH", value: 0.7 },
+  { label: "MAX", value: 1.0 },
+] as const;
+
 const PilotGroup = () => {
   const navigate = useNavigate();
   const [rovActive, setRovActive] = useState(false);
@@ -30,6 +39,8 @@ const PilotGroup = () => {
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const [shiftHeld, setShiftHeld] = useState(false);
   const [powerLimit, setPowerLimit] = useState(0.5);
+  const [yawPower, setYawPower] = useState(0.5);
+  const [activePilotPanel, setActivePilotPanel] = useState<PilotPanelMode>("yaw-function");
   const [rosStatus, setRosStatus] = useState(rosService.getStatus());
   const [rosHost, setRosHost] = useState(rosService.getTargetHost());
   const [logs, setLogs] = useState<LogEntry[]>([
@@ -79,21 +90,22 @@ const PilotGroup = () => {
   // Build and publish a Twist message
   const publishMove = useCallback(
     (direction: 'forward' | 'backward' | 'yaw_left' | 'yaw_right' | 'up' | 'down' | 'stop') => {
-      const speed = shiftHeld ? 1.0 : powerLimit;
+      const moveSpeed = shiftHeld ? 1.0 : powerLimit;
+      const yawSpeed = shiftHeld ? 1.0 : yawPower;
       const twist: Twist = {
         linear: { x: 0, y: 0, z: 0 },
         angular: { x: 0, y: 0, z: 0 },
       };
-      if (direction === 'forward') twist.linear.x = speed;
-      if (direction === 'backward') twist.linear.x = -speed;
-      if (direction === 'yaw_left') twist.angular.z = speed;
-      if (direction === 'yaw_right') twist.angular.z = -speed;
-      if (direction === 'up') twist.linear.z = speed;
-      if (direction === 'down') twist.linear.z = -speed;
+      if (direction === 'forward') twist.linear.x = moveSpeed;
+      if (direction === 'backward') twist.linear.x = -moveSpeed;
+      if (direction === 'yaw_left') twist.angular.z = yawSpeed;
+      if (direction === 'yaw_right') twist.angular.z = -yawSpeed;
+      if (direction === 'up') twist.linear.z = moveSpeed;
+      if (direction === 'down') twist.linear.z = -moveSpeed;
 
       rosService.publishTwist(twist);
     },
-    [shiftHeld, powerLimit]
+    [shiftHeld, powerLimit, yawPower]
   );
 
   const stopAll = useCallback(() => {
@@ -158,6 +170,21 @@ const PilotGroup = () => {
     { label: "ALL EXCEPT YAW", path: "/functions/all-except-yaw" },
     { label: "YAW FUNCTION", path: "/functions/yaw-function" },
   ];
+
+  const selectPilotPanel = (mode: PilotPanelMode) => {
+    setActivePilotPanel(mode);
+    addLog(
+      mode === "yaw-function"
+        ? "YAW FUNCTION panel selected"
+        : "ALL EXCEPT YAW panel selected",
+      "system"
+    );
+  };
+
+  const setYawPreset = (value: number) => {
+    setYawPower(value);
+    addLog(`Yaw power preset set to ${value.toFixed(1)}`, "info");
+  };
 
   const handleSnap = () => {
     addLog("SNAP — Screenshot captured", "system");
@@ -310,12 +337,7 @@ const PilotGroup = () => {
               <span className="text-xs font-mono text-primary">{powerLimit.toFixed(1)}</span>
             </div>
             <div className="grid grid-cols-4 gap-1">
-              {([
-                { label: "LOW", value: 0.3 },
-                { label: "MED", value: 0.5 },
-                { label: "HIGH", value: 0.7 },
-                { label: "MAX", value: 1.0 },
-              ] as const).map((preset) => (
+              {POWER_PRESETS.map((preset) => (
                 <button
                   key={preset.label}
                   onClick={() => setPowerLimit(preset.value)}
@@ -409,6 +431,89 @@ const PilotGroup = () => {
                 {dpadBtn("c", "Descending", <ChevronDown className="h-4 w-4" />, "C")}
               </div>
             </div>
+          </div>
+
+          {/* Telemetry-style Pilot Panel Switch */}
+          <div className="control-card space-y-2">
+            <p className="status-label text-muted-foreground">PILOT POWER MODES</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => selectPilotPanel("all-except-yaw")}
+                className={cn(
+                  "h-9 rounded border text-[10px] font-display font-bold tracking-wider transition-all",
+                  activePilotPanel === "all-except-yaw"
+                    ? "bg-orange-500/20 text-orange-300 border-orange-400 shadow-[0_0_0_1px_rgba(251,146,60,0.45),0_0_18px_rgba(251,146,60,0.25)]"
+                    : "bg-black/60 text-muted-foreground border-border hover:text-orange-200 hover:border-orange-400/40"
+                )}
+              >
+                ALL EXCEPT YAW
+              </button>
+              <button
+                onClick={() => selectPilotPanel("yaw-function")}
+                className={cn(
+                  "h-9 rounded border text-[10px] font-display font-bold tracking-wider transition-all",
+                  activePilotPanel === "yaw-function"
+                    ? "bg-orange-500/20 text-orange-300 border-orange-400 shadow-[0_0_0_1px_rgba(251,146,60,0.45),0_0_18px_rgba(251,146,60,0.25)]"
+                    : "bg-black/60 text-muted-foreground border-border hover:text-orange-200 hover:border-orange-400/40"
+                )}
+              >
+                YAW FUNCTION
+              </button>
+            </div>
+
+            {activePilotPanel === "yaw-function" ? (
+              <div className="bg-black/40 border border-orange-400/40 rounded p-2.5 space-y-2">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-[10px] font-display font-bold tracking-wider text-orange-300">YAW POWER LIMIT</p>
+                  <span className="text-lg font-mono text-orange-200">{yawPower.toFixed(1)}</span>
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {POWER_PRESETS.map((preset) => (
+                    <button
+                      key={`yaw-${preset.label}`}
+                      onClick={() => setYawPreset(preset.value)}
+                      className={cn(
+                        "text-[8px] font-display font-bold py-1 rounded border transition-all",
+                        yawPower === preset.value
+                          ? "bg-orange-500/30 text-orange-100 border-orange-300"
+                          : "bg-black text-muted-foreground border-border hover:text-orange-200 hover:border-orange-300/40"
+                      )}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[9px] text-muted-foreground font-mono">
+                  Yaw presets: 0.3 / 0.5 / 0.7 / 1.0
+                </p>
+              </div>
+            ) : (
+              <div className="bg-black/40 border border-border rounded p-2.5 space-y-2">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-[10px] font-display font-bold tracking-wider text-foreground">ALL EXCEPT YAW</p>
+                  <span className="text-lg font-mono text-foreground">{powerLimit.toFixed(1)}</span>
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {POWER_PRESETS.map((preset) => (
+                    <button
+                      key={`global-${preset.label}`}
+                      onClick={() => setPowerLimit(preset.value)}
+                      className={cn(
+                        "text-[8px] font-display font-bold py-1 rounded border transition-all",
+                        powerLimit === preset.value
+                          ? "bg-primary/25 text-primary border-primary/50"
+                          : "bg-black text-muted-foreground border-border hover:text-foreground hover:border-primary/40"
+                      )}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[9px] text-muted-foreground font-mono">
+                  Forward/Backward/Vertical follows this preset.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Systems Section */}
