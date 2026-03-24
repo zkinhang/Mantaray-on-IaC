@@ -24,13 +24,6 @@ spec:
       - name: controller-container
         image: "{{ main_ros_image }}"
         args: ["ros2", "run", "controller_pkg", "joystick_reader"]
-        env:
-        - name: ROS_DOMAIN_ID
-          value: "0"
-        - name: RMW_IMPLEMENTATION
-          value: "rmw_fastrtps_cpp"
-        - name: ROS_AUTOMATIC_DISCOVERY_RANGE
-          value: "SUBNET"
         # Grant privileges to access host devices
         securityContext:
           privileged: true
@@ -76,14 +69,6 @@ spec:
         command: ["/bin/bash", "-c"]
         args:
           - "source /ros2_ws/install/setup.bash && ros2 run receiver_pkg decomposer --ros-args --params-file /config/params.yaml"
-        env:
-        - name: ROS_DOMAIN_ID
-          value: "0"
-        - name: RMW_IMPLEMENTATION
-          value: "rmw_fastrtps_cpp"
-        - name: ROS_AUTOMATIC_DISCOVERY_RANGE
-          value: "SUBNET"
-
         volumeMounts:
         - name: parameter-volume
           mountPath: /config
@@ -113,13 +98,6 @@ spec:
       - name: foxglove-bridge-container
         image: "{{ main_ros_image }}"
         args: ["ros2", "launch", "foxglove_bridge", "foxglove_bridge_launch.xml", "port:=8765"]
-        env:
-        - name: ROS_DOMAIN_ID
-          value: "0"
-        - name: RMW_IMPLEMENTATION
-          value: "rmw_fastrtps_cpp"
-        - name: ROS_AUTOMATIC_DISCOVERY_RANGE
-          value: "SUBNET"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -145,13 +123,6 @@ spec:
         image: "{{ main_ros_image }}"
         # Launching rosbridge_server specifically
         args: ["ros2", "launch", "rosbridge_server", "rosbridge_websocket_launch.xml", "delay_between_messages:=0.0"]
-        env:
-        - name: ROS_DOMAIN_ID
-          value: "0"
-        - name: RMW_IMPLEMENTATION
-          value: "rmw_fastrtps_cpp"
-        - name: ROS_AUTOMATIC_DISCOVERY_RANGE
-          value: "SUBNET"
         ports:
         - containerPort: 9090
           name: websocket
@@ -178,13 +149,6 @@ spec:
       - name: msg-converter-container
         image: "{{ main_ros_image }}"
         args: ["ros2", "run", "control_system_pkg", "msg_converter"]
-        env:
-        - name: ROS_DOMAIN_ID
-          value: "0"
-        - name: RMW_IMPLEMENTATION
-          value: "rmw_fastrtps_cpp"
-        - name: ROS_AUTOMATIC_DISCOVERY_RANGE
-          value: "SUBNET"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -282,13 +246,6 @@ spec:
           - >
             source install/setup.bash && 
             ros2 launch /ros2_ws/src/launch_file/launch_thruster.py params_file:=/config/params.yaml
-        env:
-        - name: ROS_DOMAIN_ID
-          value: "0"
-        - name: RMW_IMPLEMENTATION
-          value: "rmw_fastrtps_cpp"
-        - name: ROS_AUTOMATIC_DISCOVERY_RANGE
-          value: "SUBNET"
         securityContext:
           privileged: true
           initialDelaySeconds: 30
@@ -340,13 +297,6 @@ spec:
           readOnly: true
         securityContext:
           privileged: true
-        env:
-        - name: ROS_DOMAIN_ID
-          value: "0"
-        - name: RMW_IMPLEMENTATION
-          value: "rmw_fastrtps_cpp"
-        - name: ROS_AUTOMATIC_DISCOVERY_RANGE
-          value: "SUBNET"
         command: ["/bin/bash", "-c"]
         args:
           - "source /ros2_ws/install/setup.bash && ros2 run control_system_pkg pid_system_node --ros-args --params-file /config/params.yaml"
@@ -379,13 +329,6 @@ spec:
         imagePullPolicy: Always
         securityContext:
           privileged: true
-        env:
-        - name: ROS_DOMAIN_ID
-          value: "0"
-        - name: RMW_IMPLEMENTATION
-          value: "rmw_fastrtps_cpp"
-        - name: ROS_AUTOMATIC_DISCOVERY_RANGE
-          value: "SUBNET"
         volumeMounts:
         - name: serial-port-agent
           mountPath: /dev
