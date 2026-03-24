@@ -58,13 +58,27 @@ export const TelemetryPage: React.FC = () => {
 
   const [globalLevel, setGlobalLevel] = useState<number>(0.5);
 
+  // Helper: Check if all axes are synchronized to the same value
+  const areAllAxesSynchronized = (limits: PowerLimitMsg): boolean => {
+    const values = [limits.forward, limits.rightward, limits.upward, limits.roll, limits.pitch, limits.yaw];
+    return values.every((v) => Math.abs(v - values[0]) < 0.001);
+  };
+
+  // Helper: Get the synchronized value if all axes match, otherwise undefined
+  const getSynchronizedValue = (limits: PowerLimitMsg): number | null => {
+    return areAllAxesSynchronized(limits) ? limits.forward : null;
+  };
+
   // Subscribe to power limit updates from ROS channel
   useEffect(() => {
     const unsubscribe = rosService.subscribePowerLimit((receivedPowerLimit) => {
       console.log('[TelemetryPage] Received power limit update:', receivedPowerLimit);
       setPowerLimit(receivedPowerLimit);
-      // Update global level to match the first axis (or average if you prefer)
-      setGlobalLevel(receivedPowerLimit.forward);
+      // Update global level only if all axes are synchronized
+      const syncValue = getSynchronizedValue(receivedPowerLimit);
+      if (syncValue !== null) {
+        setGlobalLevel(syncValue);
+      }
     });
 
     return unsubscribe;
@@ -78,6 +92,11 @@ export const TelemetryPage: React.FC = () => {
     setPowerLimit((prev) => {
       const updated: PowerLimitMsg = { ...prev, [axis]: value };
       publishPowerLimit(updated);
+      // Update global level to reflect the new state
+      const syncValue = getSynchronizedValue(updated);
+      if (syncValue !== null) {
+        setGlobalLevel(syncValue);
+      }
       console.info(`[TelemetryPage] ${axis} → ${value}`);
       return updated;
     });
@@ -110,22 +129,27 @@ export const TelemetryPage: React.FC = () => {
 
           {/* Current Value Display */}
           <div className="flex items-center justify-between gap-2 bg-k3s-border/20 rounded px-3 py-2">
-            <span className="font-mono text-3xl font-bold text-k3s-primary">{globalLevel.toFixed(2)}</span>
-            <span className="text-xs text-k3s-muted">/ 1.0</span>
+            <span className="font-mono text-3xl font-bold text-k3s-primary">
+              {areAllAxesSynchronized(powerLimit) ? globalLevel.toFixed(2) : '-'}
+            </span>
+            <span className="text-xs text-k3s-muted">
+              {areAllAxesSynchronized(powerLimit) ? '/ 1.0' : 'Mixed'}
+            </span>
           </div>
 
           {/* Progress Bar */}
           <div className="w-full h-2 rounded-full bg-k3s-border overflow-hidden">
             <div
               className="h-full rounded-full bg-k3s-primary transition-all duration-300 shadow-lg shadow-k3s-primary/50"
-              style={{ width: `${globalLevel * 100}%` }}
+              style={{ width: `${areAllAxesSynchronized(powerLimit) ? globalLevel * 100 : 0}%` }}
             />
           </div>
 
           {/* Power Buttons - 4 in a row */}
           <div className="flex gap-3">
             {POWER_LEVELS.map((lvl) => {
-              const active = Math.abs(globalLevel - lvl.value) < 0.001;
+              const synchronized = areAllAxesSynchronized(powerLimit);
+              const active = synchronized && Math.abs(globalLevel - lvl.value) < 0.001;
               return (
                 <button
                   key={lvl.label}
