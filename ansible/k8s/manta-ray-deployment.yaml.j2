@@ -248,10 +248,6 @@ spec:
             ros2 launch /ros2_ws/src/launch_file/launch_thruster.py params_file:=/config/params.yaml
         securityContext:
           privileged: true
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          failureThreshold: 3
-          timeoutSeconds: 4
         volumeMounts:
         - name: serial-port
           mountPath: /dev
