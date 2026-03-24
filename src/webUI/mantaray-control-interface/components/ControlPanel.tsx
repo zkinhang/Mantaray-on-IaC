@@ -1,6 +1,5 @@
 ﻿import React, { memo } from 'react';
 import { Activity, Power, ShieldAlert } from 'lucide-react';
-import { MovementControl } from './MovementControl';
 import { useRos } from '../context/RosContext';
 import { rosService } from '../services/rosService';
 
@@ -77,9 +76,6 @@ export const ControlPanel: React.FC = memo(() => {
       </div>
 
       <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0">
-        {/* Movement Module */}
-        <MovementControl />
-
         {/* Pilot Power Axes (6 equal buttons) */}
         <div className="space-y-3 pb-4">
           <div className="flex items-center gap-2 text-sm font-bold text-k3s-primary uppercase tracking-wider border-b border-k3s-border pb-2">
