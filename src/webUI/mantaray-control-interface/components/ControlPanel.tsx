@@ -2,9 +2,72 @@
 import { Activity, Power, ShieldAlert } from 'lucide-react';
 import { MovementControl } from './MovementControl';
 import { useRos } from '../context/RosContext';
+import { rosService } from '../services/rosService';
+
+interface PowerLimitMsg {
+  forward: number;
+  rightward: number;
+  upward: number;
+  roll: number;
+  pitch: number;
+  yaw: number;
+}
+
+type AxisKey = keyof PowerLimitMsg;
+
+const POWER_LEVELS: { label: string; value: number }[] = [
+  { label: 'LOW', value: 0.3 },
+  { label: 'MED', value: 0.5 },
+  { label: 'HIGH', value: 0.7 },
+  { label: 'MAX', value: 1.0 },
+];
+
+const AXES: { key: AxisKey; label: string }[] = [
+  { key: 'forward', label: 'Forward' },
+  { key: 'rightward', label: 'Rightward' },
+  { key: 'upward', label: 'Upward' },
+  { key: 'roll', label: 'Roll' },
+  { key: 'pitch', label: 'Pitch' },
+  { key: 'yaw', label: 'Yaw' },
+];
 
 export const ControlPanel: React.FC = memo(() => {
-  const { pidOn, togglePid } = useRos();
+  const { pidOn, togglePid, addLog } = useRos();
+  const [selectedAxis, setSelectedAxis] = React.useState<AxisKey>('forward');
+  const [powerLimit, setPowerLimit] = React.useState<PowerLimitMsg>({
+    forward: 0.5,
+    rightward: 0.5,
+    upward: 0.5,
+    roll: 0.5,
+    pitch: 0.5,
+    yaw: 0.5,
+  });
+
+  React.useEffect(() => {
+    const unsubscribe = rosService.subscribePowerLimit((msg) => {
+      setPowerLimit(msg);
+    });
+    return unsubscribe;
+  }, []);
+
+  const selectAxis = (axis: AxisKey) => {
+    setSelectedAxis(axis);
+    const label = AXES.find((a) => a.key === axis)?.label ?? axis;
+    addLog('info', `Pilot axis selected: ${label}`);
+  };
+
+  const setSelectedAxisPreset = (value: number) => {
+    const label = AXES.find((a) => a.key === selectedAxis)?.label ?? selectedAxis;
+    const next: PowerLimitMsg = {
+      ...powerLimit,
+      [selectedAxis]: value,
+    };
+    setPowerLimit(next);
+    rosService.publishPowerLimit(next);
+    addLog('info', `Pilot ${label} preset set to ${value.toFixed(1)}`);
+  };
+
+  const selectedAxisLabel = AXES.find((a) => a.key === selectedAxis)?.label ?? selectedAxis;
 
   return (
     <div className="bg-k3s-block border-2 border-k3s-border p-4 flex flex-col h-full shadow-2xl min-h-0 overflow-hidden">
@@ -16,6 +79,57 @@ export const ControlPanel: React.FC = memo(() => {
       <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0">
         {/* Movement Module */}
         <MovementControl />
+
+        {/* Pilot Power Axes (6 equal buttons) */}
+        <div className="space-y-3 pb-4">
+          <div className="flex items-center gap-2 text-sm font-bold text-k3s-primary uppercase tracking-wider border-b border-k3s-border pb-2">
+            <Activity className="w-4 h-4" />
+            <span>Pilot Power Axes</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {AXES.map((axis) => (
+              <button
+                key={axis.key}
+                onClick={() => selectAxis(axis.key)}
+                className={[
+                  'py-2 px-2 rounded border text-[10px] font-bold uppercase tracking-wider transition-all',
+                  selectedAxis === axis.key
+                    ? 'bg-orange-500/20 text-orange-200 border-orange-400 shadow-[0_0_0_1px_rgba(251,146,60,0.45),0_0_16px_rgba(251,146,60,0.24)]'
+                    : 'bg-k3s-dark text-k3s-muted border-k3s-border hover:border-orange-400/50 hover:text-orange-200',
+                ].join(' ')}
+              >
+                {axis.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-k3s-dark border border-orange-400/45 rounded px-3 py-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-orange-200 font-semibold uppercase tracking-wide">{selectedAxisLabel}</span>
+              <span className="text-xs font-mono text-orange-200">{powerLimit[selectedAxis].toFixed(2)} / 1.0</span>
+            </div>
+            <div className="mt-2 grid grid-cols-4 gap-1">
+              {POWER_LEVELS.map((lvl) => {
+                const active = Math.abs(powerLimit[selectedAxis] - lvl.value) < 0.001;
+                return (
+                  <button
+                    key={`${selectedAxis}-${lvl.value}`}
+                    onClick={() => setSelectedAxisPreset(lvl.value)}
+                    className={[
+                      'px-1.5 py-1 rounded text-[10px] font-semibold border transition-colors',
+                      active
+                        ? 'bg-orange-500/30 text-orange-100 border-orange-300'
+                        : 'bg-k3s-block border-k3s-border text-k3s-muted hover:text-orange-100 hover:border-orange-300/70',
+                    ].join(' ')}
+                  >
+                    {lvl.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
 
         {/* PID Toggle Section */}
         <div className="space-y-4 pb-4">
