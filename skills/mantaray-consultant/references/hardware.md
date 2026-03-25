@@ -8,8 +8,8 @@ The cluster uses `nodeSelector` to ensure pods run on the correct hardware.
 | Node Name | Label (`ros2-hardware`) | Primary Role | Key Hardware |
 |-----------|-------------------------|--------------|--------------|
 | `mantaray`| `land-pc`               | Surface      | Joystick (USB), WebUI Server |
-| `rov-cam` | `rov-main`              | Control      | Thruster Board (Serial), IMU |
-| `rov`     | `rov-camera`            | Associate    | Cameras (USB), ESP32 (Micro-ROS)|
+| `rov-cam` | `rov-main`              | Control      | Camera (USB), Thruster Board (Serial), IMU |
+| `rov`     | `rov-camera`            | Associate    | Camera (USB), ESP32 (Micro-ROS)|
 
 ## Device Volumes
 Host devices are mapped into containers via the `manta-ray-deployment.yaml.j2` template, influenced by variables in `ansible/vars/hardware-paths.yaml`.
