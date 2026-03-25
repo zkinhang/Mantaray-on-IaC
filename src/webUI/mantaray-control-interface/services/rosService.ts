@@ -12,12 +12,15 @@ class RosService {
 
   private listeners: ((connected: boolean) => void)[] = [];
   private pidListeners: ((enabled: boolean) => void)[] = [];
+  private powerLimitListeners: ((powerLimit: { forward: number; rightward: number; upward: number; roll: number; pitch: number; yaw: number }) => void)[] = [];
   private logListeners: ((log: { type: 'info' | 'warn' | 'error' | 'success', message: string, timestamp: string }) => void)[] = [];
   
   // Topics
   private cmdVelTopic: any = null;
   private pidToggleSub: any = null;
   private pidTogglePub: any = null;
+  private powerLimitSub: any = null;
+  private powerLimitPub: any = null;
 
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -138,11 +141,6 @@ class RosService {
         messageType: 'geometry_msgs/Twist'
         });
 
-        // Debug subscriber for /cmd_vel to confirm bridge loopback
-        this.cmdVelTopic.subscribe((message: any) => {
-          console.log(`[ROS] Received /cmd_vel:`, message);
-        });
-
         // Setup /pid/toggle Subscriber
         this.pidToggleSub = new ROSLIB.Topic({
         ros: this.ros,
@@ -160,6 +158,25 @@ class RosService {
         ros: this.ros,
         name: '/pid/toggle',
         messageType: 'std_msgs/Bool'
+        });
+
+        // Setup /controller/power_limit Subscriber
+        this.powerLimitSub = new ROSLIB.Topic({
+          ros: this.ros,
+          name: '/controller/power_limit',
+          messageType: 'custom_interfaces/PowerLimit'
+        });
+
+        this.powerLimitSub.subscribe((message: { forward: number; rightward: number; upward: number; roll: number; pitch: number; yaw: number }) => {
+          console.log(`[ROS] Received /controller/power_limit:`, message);
+          this.notifyPowerLimitListeners(message);
+        });
+
+        // Setup /controller/power_limit Publisher (PowerLimit message)
+        this.powerLimitPub = new ROSLIB.Topic({
+          ros: this.ros,
+          name: '/controller/power_limit',
+          messageType: 'custom_interfaces/PowerLimit'
         });
     } catch (err) {
         console.error("[ROS] Error setting up topics:", err);
@@ -181,12 +198,23 @@ class RosService {
     };
   }
 
+  public subscribePowerLimit(callback: (powerLimit: { forward: number; rightward: number; upward: number; roll: number; pitch: number; yaw: number }) => void) {
+    this.powerLimitListeners.push(callback);
+    return () => {
+      this.powerLimitListeners = this.powerLimitListeners.filter(l => l !== callback);
+    };
+  }
+
   private notifyStatusListeners() {
     this.listeners.forEach(l => l(this.isConnected));
   }
 
   private notifyPidListeners(enabled: boolean) {
     this.pidListeners.forEach(l => l(enabled));
+  }
+
+  private notifyPowerLimitListeners(powerLimit: { forward: number; rightward: number; upward: number; roll: number; pitch: number; yaw: number }) {
+    this.powerLimitListeners.forEach(l => l(powerLimit));
   }
 
   public addLog(type: 'info' | 'warn' | 'error' | 'success', message: string) {
@@ -230,6 +258,38 @@ class RosService {
     
     this.pidTogglePub.publish(message);
     this.addLog('info', `TOPIC [/pid/toggle]: STATE=${value ? 'ENABLED' : 'DISABLED'}`);
+  }
+
+  public publishPowerLimit(powerLimit: { forward: number; rightward: number; upward: number; roll: number; pitch: number; yaw: number }) {
+    if (!this.isConnected) {
+      console.warn('[ROS] Cannot publish power limit: Not connected');
+      this.addLog('warn', 'Cannot publish power limit: Not connected to ROS');
+      return;
+    }
+    
+    if (!this.powerLimitPub) {
+      console.warn('[ROS] Cannot publish power limit: Topic not initialized');
+      this.addLog('warn', 'Cannot publish power limit: Topic not initialized');
+      return;
+    }
+
+    const message = new ROSLIB.Message({
+      forward: powerLimit.forward,
+      rightward: powerLimit.rightward,
+      upward: powerLimit.upward,
+      roll: powerLimit.roll,
+      pitch: powerLimit.pitch,
+      yaw: powerLimit.yaw
+    });
+
+    try {
+      this.powerLimitPub.publish(message);
+      this.addLog('info', `TOPIC [/controller/power_limit]: forward=${powerLimit.forward.toFixed(2)} rightward=${powerLimit.rightward.toFixed(2)} upward=${powerLimit.upward.toFixed(2)} roll=${powerLimit.roll.toFixed(2)} pitch=${powerLimit.pitch.toFixed(2)} yaw=${powerLimit.yaw.toFixed(2)}`);
+      console.log(`[ROS] Published to /controller/power_limit:`, message);
+    } catch (err) {
+      console.error('[ROS] Failed publishing power limit', err);
+      this.addLog('error', `Failed to publish /controller/power_limit: ${err}`);
+    }
   }
 }
 
