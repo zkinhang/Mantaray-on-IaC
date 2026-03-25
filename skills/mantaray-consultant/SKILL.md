@@ -63,15 +63,15 @@ To maintain meticulous order, the project is structured as follows:
 ## Key Workflows
 
 ### Infrastructure Setup & Maintenance
-- **Initial Setup (Full Reinstall)**: Run `ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml`. Avoid running this unless a total cluster reset is required.
-- **Fix IP/Network Changes (Preferred)**: Make sure the network config in `ansible/inventory_infra.ini` is up-to-date, and run `ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml`. This fixes IP mismatches and interface changes (e.g., Wi-Fi to Ethernet) or any malfunctioning after a period of time, without reinstalling the cluster.
+- **Initial Setup (Full Reinstall)**: Run `uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml`. Avoid running this unless a total cluster reset is required.
+- **Fix IP/Network Changes (Preferred)**: Make sure the network config in `ansible/inventory_infra.ini` is up-to-date, and run `uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml`. This fixes IP mismatches and interface changes (e.g., Wi-Fi to Ethernet) or any malfunctioning after a period of time, without reinstalling the cluster.
 - **Post-Setup Permission Fix**: **Critical**: Always run `bash kube_permission.sh` after cluster changes to fix local `kubectl` access.
-- **Dashboard Access**: After infrastructure changes, run `ansible-playbook -i  ansible/playbook-dashboard-setup.yaml` to re-expose the UI and generate a refreshed admin token for access.
+- **Dashboard Access**: After infrastructure changes, run `uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml` to re-expose the UI and generate a refreshed admin token for access.
 
 ### Application Deployment
 - **Build**: `./build_and_copy_to_local_registry.sh`.
-- **Deploy/Update Config**: `ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml`. Use this after editing `robot_params.json`; it automatically restarts relevant control nodes.
-- **Full Application Restart**: Add `-e "force_restart=true"` to the deploy command to force a rolling update of all pods following  (use for code changes or verifying a fresh state)`ansible/vars/deployment-vars.yaml`.
+- **Deploy/Update Config**: `uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml`. Use this after editing `robot_params.json`; it automatically restarts relevant control nodes.
+- **Full Application Restart**: Add `-e "force_restart=true"` to the deploy command to force a rolling update of all pods following `ansible/vars/deployment-vars.yaml` (use for code changes or verifying a fresh state).
 
 ### Configuration
 - `ansible/config/robot_params.json`: Centralized PID gains, port assignments, and sensor offsets.
