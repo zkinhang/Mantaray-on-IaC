@@ -2,7 +2,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY src/webUI/mantaray-control-interface/package*.json ./
+COPY src/webUI/mantaray-control-interface/package*.json .
 
 # Install dependencies
 RUN npm install
@@ -11,6 +11,7 @@ RUN npm install
 COPY src/webUI/mantaray-control-interface/ ./
 
 RUN npm run build
+RUN npm audit fix
 
 # Use a lightweight Nginx alpine image to serve the static files
 FROM nginx:stable-alpine
