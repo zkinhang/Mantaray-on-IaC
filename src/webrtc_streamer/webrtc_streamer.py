@@ -138,9 +138,9 @@ async def on_shutdown(app: web.Application) -> None:
     await app["camera_source"].close()
 
 
-def build_app(device: int | str) -> web.Application:
+def build_app(device: int | str, width: int, height: int, fps: int) -> web.Application:
     app = web.Application()
-    app["camera_source"] = CameraSource(device)
+    app["camera_source"] = CameraSource(device, width=width, height=height, fps=fps)
     app["peer_connections"] = set()
     app.router.add_route("OPTIONS", "/offer", options_handler)
     app.router.add_post("/offer", offer_handler)
@@ -153,12 +153,22 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Standalone WebRTC camera streamer")
     parser.add_argument("--device", default="0", help="Camera device index or path, for example 0 or /dev/video0")
     parser.add_argument("--port", type=int, default=8080, help="HTTP port for signaling")
+    parser.add_argument("--width", type=int, default=1280, help="Requested camera width")
+    parser.add_argument("--height", type=int, default=960, help="Requested camera height")
+    parser.add_argument("--fps", type=int, default=60, help="Requested camera FPS")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
-    app = build_app(parse_device(args.device))
-    LOGGER.info("Starting WebRTC streamer on 0.0.0.0:%s using device %s", args.port, args.device)
+    app = build_app(parse_device(args.device), width=args.width, height=args.height, fps=args.fps)
+    LOGGER.info(
+        "Starting WebRTC streamer on 0.0.0.0:%s using device %s at %sx%s %sfps",
+        args.port,
+        args.device,
+        args.width,
+        args.height,
+        args.fps,
+    )
     web.run_app(app, host="0.0.0.0", port=args.port)
 
 

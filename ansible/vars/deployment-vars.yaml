@@ -12,8 +12,8 @@ all_app_deployments:
   # - morse-code-deployment
   - foxglove-bridge-deployment
   - msg-converter-deployment
-  - http-streamer-a-deployment
-  - http-streamer-b-deployment
+  - webrtc-streamer-a-deployment
+  - webrtc-streamer-b-deployment
   - thrusterboard-deployment
   - pid-system-deployment
   - microros-agent-deployment
