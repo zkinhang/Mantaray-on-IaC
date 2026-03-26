@@ -1,7 +1,5 @@
 # This is a node send the middle value of the twist message to topic "/pid/cmd_vel", to initalize the thrusters
 
-
-
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
