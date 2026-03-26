@@ -389,4 +389,27 @@ spec:
             esptool --port {{ path_microros_serial }} run && 
             echo "Starting Micro-ROS Agent..." &&
             ros2 run micro_ros_agent micro_ros_agent serial --dev {{ path_microros_serial }}
-
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webui-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webui
+  template:
+    metadata:
+      labels:
+        app: webui
+    spec:
+      nodeSelector:
+        ros2-hardware: land-pc
+      containers:
+      - name: webui-container
+        image: "{{ web_ui_image }}"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+---
