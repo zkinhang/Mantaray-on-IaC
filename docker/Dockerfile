@@ -9,11 +9,6 @@ COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /bin/uv
 RUN apt-get update && apt-get install -y \
     libevdev-dev \
     ros-dev-tools \
-    # Add C++ dependencies from your CMakeLists.txt
-    libopencv-dev \
-    libcurl4-openssl-dev \
-    libssl-dev \
-    binutils \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /ros2_ws
@@ -51,9 +46,6 @@ RUN ["/bin/bash", "-c", " \
     colcon build --packages-skip serial \
 "]
 
-# Build the C++ nodes
-RUN strip --strip-unneeded install/http_streamer/lib/http_streamer/* || true
-
 # --- Final Stage ---
 # This stage creates the small, final image for running the nodes.
 FROM ros:jazzy-ros-core
@@ -62,8 +54,6 @@ FROM ros:jazzy-ros-core
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-opencv \
     python3-numpy \
-    libcurl4 \
-    libssl3 \
     ros-jazzy-cv-bridge \
     ros-jazzy-foxglove-bridge \
     ros-jazzy-rosbridge-server \
