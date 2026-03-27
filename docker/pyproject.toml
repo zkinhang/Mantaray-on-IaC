@@ -3,9 +3,9 @@ name = "mantaray-robot-node"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "aiohttp",
-    "aiortc",
-    "av",
+    "aiohttp>=3.13.3",
+    "aiortc>=1.14.0",
+    "av>=16.1.0",
     "inputs",
     "evdev",
     "empy",
@@ -16,5 +16,6 @@ dependencies = [
     "textual",
     "requests",
     "pyserial",
-    "simple_pid"
+    "simple_pid",
+    "pyopenssl<25.2.0"
 ]
