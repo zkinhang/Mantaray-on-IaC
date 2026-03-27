@@ -9,11 +9,6 @@ COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /bin/uv
 RUN apt-get update && apt-get install -y \
     libevdev-dev \
     ros-dev-tools \
-    # Add C++ dependencies from your CMakeLists.txt
-    libopencv-dev \
-    libcurl4-openssl-dev \
-    libssl-dev \
-    binutils \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /ros2_ws
@@ -22,7 +17,8 @@ WORKDIR /ros2_ws
 ENV VENV_PATH=/ros2_ws/.venv
 COPY docker/common/pyproject.toml ./pyproject.toml
 COPY docker/common/uv.lock ./uv.lock
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv lock
+RUN uv sync --no-dev --no-install-project
 
 
 RUN rm -rf .venv/lib/python3.12/site-packages/numpy* \
@@ -51,9 +47,6 @@ RUN ["/bin/bash", "-c", " \
     colcon build --packages-skip serial \
 "]
 
-# Build the C++ nodes
-RUN strip --strip-unneeded install/http_streamer/lib/http_streamer/* || true
-
 # --- Final Stage ---
 # This stage creates the small, final image for running the nodes.
 FROM ros:jazzy-ros-core
@@ -62,8 +55,6 @@ FROM ros:jazzy-ros-core
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-opencv \
     python3-numpy \
-    libcurl4 \
-    libssl3 \
     ros-jazzy-cv-bridge \
     ros-jazzy-foxglove-bridge \
     ros-jazzy-rosbridge-server \
@@ -91,12 +82,15 @@ COPY --from=builder /ros2_ws/src/launch_file /ros2_ws/src/launch_file
 COPY --from=builder /ros2_ws/src/ros2/thrusterboard_pkg/thrusterboard_pkg/ThrusterBoard_API.py /ros2_ws/src/ThrusterBoard_API.py
 
 
+# Copy standalone WebRTC streamer script for direct python execution
+COPY --from=builder /ros2_ws/src/webrtc_streamer/webrtc_streamer.py /ros2_ws/src/webrtc_streamer.py
+
 # Copy the microros folder
 # COPY --from=builder /ros2_ws/src/microRos /ros2_ws/src/microRos
 
 # Copy and set up the entrypoint script
 ENV PATH="/ros2_ws/.venv/bin:$PATH"
-ENV PYTHONPATH="/usr/lib/python3/dist-packages:/ros2_ws/.venv/lib/python3.12/site-packages:$PYTHONPATH"
+ENV PYTHONPATH="/ros2_ws/.venv/lib/python3.12/site-packages:/usr/lib/python3/dist-packages:$PYTHONPATH"
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
