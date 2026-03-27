@@ -3,11 +3,10 @@ import serial
 import time
 import numpy as np
 import argparse
+import sys
 from serial.tools.list_ports_common import ListPortInfo
 
-
 class ThrusterBoard:
-    # --- MODIFIED __init__ to accept mapping ---
     def __init__(self, port, baudrate=115200, mapping=None) -> None:
         self.ser = serial.Serial(port, baudrate, timeout=1/60)
         self.data = ""
@@ -15,8 +14,8 @@ class ThrusterBoard:
         if mapping is not None:
             self.mapping = np.array(mapping)
         else:
-            # Default mapping for standalone testing
-            self.mapping = np.array([-4,2,3,-1,-5,-8,6,7])
+            # Default mapping for standalone testing if not specified via CLI
+            self.mapping = np.array([-4, 2, 3, -1, -5, -8, 6, 7])
         
         """
         Thruster config
@@ -34,6 +33,7 @@ class ThrusterBoard:
         self.depth: float | None = None
         self.depth_log = []
         print(f"ThrusterBoard initialized on port {port} at {baudrate} baud.")
+        print(f"Active Mapping Config: {self.mapping}")
 
     def read(self) -> bytes:
         """Read data from thruster board
@@ -80,52 +80,75 @@ class ThrusterBoard:
             bytes: data received from thruster board
         """
         data_send = b'\xFF'
+        # Apply mapping: determine internal index and direction sign
         abs_mapping = np.abs(self.mapping) - 1
         after_mapping = power_matrix[abs_mapping]
         power_matrix = np.clip(after_mapping, -1, 1)
         for i in range(8):
             sign = -1 if self.mapping[i] < 0 else 1
-            output_power = max(0,min((127 * power_matrix[i] * sign) + 128 - 5, 255))
+            # Protocol: (127 * power * sign) + 128 - 5 (Center at ~123-128)
+            output_power = max(0, min((127 * power_matrix[i] * sign) + 128 - 5, 255))
             data_send += int(output_power).to_bytes(1, 'little')
         data_send += b'\xAA'
         self.write(data_send)
         return self.read()
 
-# Run this script directly for standalone thruster testing
+    def stop_all(self):
+        """Force stop all thrusters immediately."""
+        print("\nSafety Protocol: Shutting down all motors...")
+        self.set_Thruster(np.zeros(8))
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Test individual thrusters')
-    parser.add_argument('thruster', type=int, choices=range(1, 9),
-                       help='Thruster number (1-8) to test')
-    parser.add_argument('--power', type=float, default=0.3,
-                       help='Power level (0-1), default 0.3')
+    parser = argparse.ArgumentParser(description='Mantaray Integrated Thruster Testing Utility')
+    # Use 0 as the ID for "All Thrusters" mode
+    parser.add_argument('thruster', type=int, choices=range(0, 9), 
+                        help='Thruster ID (1-8) or 0 to test ALL units simultaneously')
+    parser.add_argument('--power', type=float, default=0.3, 
+                        help='Power level (range -1.0 to 1.0), default 0.3')
+    parser.add_argument('--mapping', type=str, 
+                        help='Custom mapping array as string (e.g., "-4,2,3,-1,-5,-8,6,7")')
+    parser.add_argument('--hw_id', type=str, default="1A86:7523", 
+                        help='Target device HW ID (VID:PID)')
     args = parser.parse_args()
 
-    # list all available ports and connect to device with VID:PID = 1A86:7523
+    # Parse mapping if provided via CLI
+    custom_mapping = None
+    if args.mapping:
+        try:
+            custom_mapping = [int(x.strip()) for x in args.mapping.split(',')]
+            if len(custom_mapping) != 8:
+                raise ValueError("Mapping array must contain exactly 8 elements.")
+        except Exception as e:
+            print(f"Mapping Parse Error: {e}")
+            sys.exit(1)
+
+    # Device Discovery
     ports: list[ListPortInfo] = serial.tools.list_ports.comports()
     board = None
-    board_hw_id = "1A86:7523" # Hardcoded for standalone test
-    port_name = "USB0"       # Hardcoded for standalone test
-    
     for port, desc, hw_id in sorted(ports):
-        print(f"{port}: {desc} [{hw_id}]")
-        if board_hw_id in hw_id or port_name in port:
-            print(f"Found device, connecting to {port}...")
-            board = ThrusterBoard(port) # Uses default mapping for test
+        # Match by HW ID or Fallback to USB0
+        if args.hw_id in hw_id or "USB0" in port:
+            print(f"Connecting to device at {port}...")
+            board = ThrusterBoard(port, mapping=custom_mapping)
             break
             
     if board is None:
-        print("Device not found")
-        exit(1)
+        print("Error: No compatible thruster board found. Check hardware.")
+        sys.exit(1)
 
+    mode_desc = f"ALL THRUSTERS" if args.thruster == 0 else f"THRUSTER {args.thruster}"
+    print(f"Starting test for {mode_desc} at power {args.power}. Press Ctrl+C to terminate.")
+    
     while True:
-        # Create test array with all zeros except selected thruster
         test_array = np.zeros(8)
-        test_array[args.thruster - 1] = args.power
-        # for i in range(8):
-        #         test_array[i] = args.power
-
+        if args.thruster == 0:
+            # All-Active Mode: Deploy full force across the board
+            test_array = np.ones(8) * args.power
+        else:
+            # Targeted Mode: Test individual unit
+            test_array[args.thruster - 1] = args.power
+        
         print(f"Testing thruster {args.thruster} at {args.power} power")
         data = board.set_Thruster(test_array)
         print(data)
-        # time.sleep(0.1)
-        
+    

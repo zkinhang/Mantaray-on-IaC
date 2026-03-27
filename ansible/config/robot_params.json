@@ -54,7 +54,18 @@
     },
     "ahrs_driver_node": {
         "ros__parameters": {
-            "serial_port_": "/dev/ttyUSB1"
+            "serial_port_": "/dev/ttyUSB1",
+            "serial_baud_": 921600,
+            "if_debug_": false,
+            "device_type_": 1,
+            "imu_topic": "/imu",
+            "imu_frame_id_": "gyro_link",
+            "mag_pose_2d_topic": "/mag_pose_2d",
+            "Magnetic_topic": "/magnetic",
+            "Euler_angles_topic": "/euler_angles",
+            "gps_topic": "/gps/fix",
+            "twist_topic": "/system_speed",
+            "NED_odom_topic": "/NED_odometry"
         }
     },
     "command_decomposer": {

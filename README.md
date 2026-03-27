@@ -7,30 +7,28 @@
 # Ansible Playbook Manual
 
 ## Quick Command Reference
-(you may add `uv run` before it)
 ```bash
 # Full installation
-ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml # Error is expected in this step due to kubeconfig permissions
+uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml # Error is expected in this step due to kubeconfig permissions
 bash kube_permission.sh
 ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml
-ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
-ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
-bash display_init.sh
+uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
+uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
 
 # Network switch
-ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
+uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
 bash kube_permission.sh
-ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
-ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
+uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
+uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
 
 # Apply changes from robot_params.json
-ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
+uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
 
 # Deploy all apps
-ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
+uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
 
 # Dashboard only
-ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
+uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
 
 # Verify cluster
 kubectl get nodes
@@ -73,7 +71,7 @@ Configure in `ansible/inventory_infra.ini`:
 ### How to Run
 
 ```bash
-ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml
+uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml
 ```
 
 ### Post-Installation: Fix Kubernetes Permissions
@@ -108,7 +106,7 @@ Update in `ansible/inventory_infra.ini`:
 ### How to Run
 
 ```bash
-ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
+uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
 ```
 
 ### Post-Network Switch: Fix Kubernetes Permissions
@@ -134,12 +132,12 @@ bash kube_permission.sh
 
 **Deploy or update applications:**
 ```bash
-ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
+uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
 ```
 
 **Force restart all applications:**
 ```bash
-ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
+uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
 ```
 
 ---
@@ -156,7 +154,7 @@ ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_re
 ### How to Run
 
 ```bash
-ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
+uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
 ```
 
 The playbook will output:
@@ -175,7 +173,7 @@ The playbook will output:
 
 2. **Run infrastructure playbook:**
    ```bash
-   ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml
+   uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml
    ```
 
 3. **Fix kubectl permissions:**
@@ -185,12 +183,12 @@ The playbook will output:
 
 4. **Deploy applications:**
    ```bash
-   ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
+   uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
    ```
 
 5. **Setup dashboard:**
    ```bash
-   ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
+   uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
    ```
 
 6. **Verify cluster:**
@@ -207,7 +205,7 @@ The playbook will output:
 
 2. **Run network switch playbook:**
    ```bash
-   ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
+   uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
    ```
 
 3. **Fix kubectl permissions:**
@@ -217,12 +215,12 @@ The playbook will output:
 
 4. **Redeploy applications:**
    ```bash
-   ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
+   uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
    ```
 
 5. **Redeploy dashboard:**
    ```bash
-   ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
+   uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
    ```
 
 ---
@@ -255,4 +253,5 @@ sudo systemctl restart NetworkManager
 
 - [ ] Fix automatic Kubernetes permission configuration
 - [ ] CI/CD pipeline for uploading images to local registry
-- [ ] Control panel UI
+- [ ] Integrate webRTC to cluster
+- [ ] Integrate webUI to cluster
