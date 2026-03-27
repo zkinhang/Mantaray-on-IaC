@@ -1,0 +1,11 @@
+# Ignore ROS directories to keep the Web UI build context tiny
+src/ros2/
+src/microRos/
+src/launch_file/
+src/http_streamer/
+k3s-setup/
+ansible/
+
+# Ignore massive Node modules
+**/node_modules/
+**/dist/
