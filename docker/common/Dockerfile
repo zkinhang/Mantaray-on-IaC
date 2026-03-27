@@ -92,7 +92,7 @@ COPY --from=builder /ros2_ws/src/webrtc_streamer/webrtc_streamer.py /ros2_ws/src
 ENV PATH="/ros2_ws/.venv/bin:$PATH"
 ENV PYTHONPATH="/ros2_ws/.venv/lib/python3.12/site-packages:/usr/lib/python3/dist-packages:$PYTHONPATH"
 
-COPY docker/entrypoint.sh /entrypoint.sh
+COPY docker/common/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
