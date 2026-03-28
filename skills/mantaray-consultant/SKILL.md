@@ -34,8 +34,9 @@ The application is modularized within `src/`:
   - `pid_system`: Advanced stabilization logic (recently updated with enhanced gains and derivative filtering).
 - **WebUI Control Interface (`src/webUI/`)**: Offline-first control panel. Uses local fonts, Tailwind CSS, and roslib to operate in air-gapped or restricted network environments.
 - **Hardware Interface (`src/microRos/`)**: Bridge for low-level controllers (ESP32/Teensy).
-- **Streaming (`src/http_streamer/`, `src/webrtc_streamer/`)**: High-performance video streaming nodes. Transitioning from MJPEG over HTTP to WebRTC for lower latency and bandwidth efficiency.
+- **Streaming (`src/http_streamer/`, `src/webrtc_streamer/`)**: High-performance video streaming nodes. Transitioning from MJPEG over HTTP to WebRTC for lower latency and bandwidth efficiency. `http_streamer` is now archived in `src/Archived_for_demo/` as the project moves to `webrtc_streamer`.
 - **Launch System (`src/launch_file/`)**: Orchestrates node interaction.
+- **WebRTC Control**: `src/webUI/test_webrtc.html` and `hooks/useWebRTC.ts` provide the new standardized low-latency interface.
 
 ## Repository Layout
 
