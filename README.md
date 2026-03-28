@@ -9,8 +9,9 @@
 ## Quick Command Reference
 ```bash
 # Full installation
-uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml
+uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml # Error is expected in this step due to kubeconfig permissions
 bash kube_permission.sh
+ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml
 uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
 uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
 

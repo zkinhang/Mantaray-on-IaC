@@ -1,5 +1,6 @@
 main_ros_image: "mantaray.local:5000/manta-ray-ros:latest"
 microros_image: "mantaray.local:5000/microros-with-esptool:0.1"
+web_ui_image: "mantaray.local:5000/mantaray-control-interface:latest"
 
 all_app_deployments:
   - controller-deployment
@@ -12,9 +13,10 @@ all_app_deployments:
   # - morse-code-deployment
   - foxglove-bridge-deployment
   - msg-converter-deployment
-  - http-streamer-a-deployment
-  - http-streamer-b-deployment
+  - webrtc-streamer-a-deployment
+  - webrtc-streamer-b-deployment
   - thrusterboard-deployment
   - pid-system-deployment
   - microros-agent-deployment
   - rosbridge-server-deployment
+  - webui-deployment

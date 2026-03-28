@@ -169,23 +169,24 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: http-streamer-a-deployment
+  name: webrtc-streamer-a-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: http-streamer-a
+      app: webrtc-streamer-a
   template:
     metadata:
       labels:
-        app: http-streamer-a
+        app: webrtc-streamer-a
     spec:
+      hostNetwork: true
       nodeSelector:
         ros2-hardware: rov-main
       containers:
-      - name: http-streamer-a-container
+      - name: webrtc-streamer-a-container
         image: "{{ main_ros_image }}"
-        args: ["httpStreamer"]
+        command: ["python", "src/webrtc_streamer.py", "--width", "1280", "--height", "960", "--fps", "60"]
         env:
         - name: ROS_DOMAIN_ID
           value: "0"
@@ -202,23 +203,24 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: http-streamer-b-deployment
+  name: webrtc-streamer-b-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: http-streamer-b
+      app: webrtc-streamer-b
   template:
     metadata:
       labels:
-        app: http-streamer-b
+        app: webrtc-streamer-b
     spec:
+      hostNetwork: true
       nodeSelector:
         ros2-hardware: rov-camera
       containers:
-      - name: http-streamer-b-container
+      - name: webrtc-streamer-b-container
         image: "{{ main_ros_image }}"
-        args: ["httpStreamer"]
+        command: ["python", "src/webrtc_streamer.py", "--width", "1280", "--height", "960", "--fps", "60"]
         env:
         - name: ROS_DOMAIN_ID
           value: "0"
@@ -389,4 +391,27 @@ spec:
             esptool --port {{ path_microros_serial }} run && 
             echo "Starting Micro-ROS Agent..." &&
             ros2 run micro_ros_agent micro_ros_agent serial --dev {{ path_microros_serial }}
-
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webui-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webui
+  template:
+    metadata:
+      labels:
+        app: webui
+    spec:
+      nodeSelector:
+        ros2-hardware: land-pc
+      containers:
+      - name: webui-container
+        image: "{{ web_ui_image }}"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+---

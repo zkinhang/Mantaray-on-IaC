@@ -1,5 +1,4 @@
 import { TwistMessage } from '../types';
-import * as ROSLIB from 'roslib';
 
 class RosService {
   private ros: any = null;
@@ -89,7 +88,7 @@ class RosService {
     this.addLog('info', `Initializing ROS Bridge Link: ${url}`);
 
     try {
-      this.ros = new ROSLIB.Ros({ url });
+      this.ros = new window.ROSLIB.Ros({ url });
 
       this.ros.on('connection', () => {
         console.log('[ROS] Connected to websocket server.');
@@ -135,14 +134,14 @@ class RosService {
 
     try {
         // Setup /cmd_vel Publisher
-        this.cmdVelTopic = new ROSLIB.Topic({
+        this.cmdVelTopic = new window.ROSLIB.Topic({
         ros: this.ros,
         name: '/cmd_vel',
         messageType: 'geometry_msgs/Twist'
         });
 
         // Setup /pid/toggle Subscriber
-        this.pidToggleSub = new ROSLIB.Topic({
+        this.pidToggleSub = new window.ROSLIB.Topic({
         ros: this.ros,
         name: '/pid/toggle',
         messageType: 'std_msgs/Bool'
@@ -154,14 +153,14 @@ class RosService {
         });
 
         // Setup /pid/toggle Publisher
-        this.pidTogglePub = new ROSLIB.Topic({
+        this.pidTogglePub = new window.ROSLIB.Topic({
         ros: this.ros,
         name: '/pid/toggle',
         messageType: 'std_msgs/Bool'
         });
 
         // Setup /controller/power_limit Subscriber
-        this.powerLimitSub = new ROSLIB.Topic({
+        this.powerLimitSub = new window.ROSLIB.Topic({
           ros: this.ros,
           name: '/controller/power_limit',
           messageType: 'custom_interfaces/PowerLimit'
@@ -173,7 +172,7 @@ class RosService {
         });
 
         // Setup /controller/power_limit Publisher (PowerLimit message)
-        this.powerLimitPub = new ROSLIB.Topic({
+        this.powerLimitPub = new window.ROSLIB.Topic({
           ros: this.ros,
           name: '/controller/power_limit',
           messageType: 'custom_interfaces/PowerLimit'
@@ -236,7 +235,7 @@ class RosService {
   public publishTwist(twist: TwistMessage) {
     if (!this.isConnected || !this.cmdVelTopic) return;
     
-    const message = new ROSLIB.Message({
+    const message = new window.ROSLIB.Message({
       linear: twist.linear,
       angular: twist.angular
     });
@@ -252,7 +251,7 @@ class RosService {
   public publishPidToggle(value: boolean) {
     if (!this.isConnected || !this.pidTogglePub) return;
     
-    const message = new ROSLIB.Message({
+    const message = new window.ROSLIB.Message({
       data: value
     });
     
@@ -273,7 +272,7 @@ class RosService {
       return;
     }
 
-    const message = new ROSLIB.Message({
+    const message = new window.ROSLIB.Message({
       forward: powerLimit.forward,
       rightward: powerLimit.rightward,
       upward: powerLimit.upward,
