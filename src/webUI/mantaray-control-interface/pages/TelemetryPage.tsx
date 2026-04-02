@@ -80,14 +80,27 @@ export const TelemetryPage: React.FC = () => {
     const newValue = Math.max(0, Math.min(1, parseFloat(editingValue) || 0));
     
     const newPresets = { ...powerPresets };
-    const groupPresets = [...newPresets[group]];
-    groupPresets[index] = { ...groupPresets[index], value: newValue };
-    groupPresets.sort((a, b) => a.value - b.value);
     
-    newPresets[group] = groupPresets;
+    if (group === 'global') {
+      // If editing global, cascade the newly set preset value to all individual axes
+      (Object.keys(newPresets) as PresetGroupKey[]).forEach((g) => {
+        const groupPresets = [...newPresets[g]];
+        groupPresets[index] = { ...groupPresets[index], value: newValue };
+        groupPresets.sort((a, b) => a.value - b.value);
+        newPresets[g] = groupPresets;
+      });
+      addLog('info', `[Telemetry] Global & All Axes Preset updated: ${newPresets.global[index].label} → ${newValue.toFixed(2)}`);
+    } else {
+      // Otherwise just update the specific axis
+      const groupPresets = [...newPresets[group]];
+      groupPresets[index] = { ...groupPresets[index], value: newValue };
+      groupPresets.sort((a, b) => a.value - b.value);
+      newPresets[group] = groupPresets;
+      addLog('info', `[Telemetry] ${group} Preset updated: ${groupPresets[index].label} → ${newValue.toFixed(2)}`);
+    }
+    
     updatePowerPresets(newPresets);
     setEditingPreset(null);
-    addLog('info', `[Telemetry] ${group} Preset updated: ${groupPresets[index].label} → ${newValue.toFixed(2)}`);
   };
 
   const cancelEditingPreset = () => {
