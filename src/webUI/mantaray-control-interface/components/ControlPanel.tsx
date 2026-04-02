@@ -2,7 +2,6 @@
 import { Activity, Power, ShieldAlert } from 'lucide-react';
 import { MovementControl } from './MovementControl';
 import { useRos } from '../context/RosContext';
-import { rosService } from '../services/rosService';
 
 interface PowerLimitMsg {
   forward: number;
@@ -32,23 +31,8 @@ const AXES: { key: AxisKey; label: string }[] = [
 ];
 
 export const ControlPanel: React.FC = memo(() => {
-  const { pidOn, togglePid, addLog } = useRos();
+  const { pidOn, togglePid, addLog, powerLimit, setPowerLimit, powerPresets } = useRos();
   const [selectedAxis, setSelectedAxis] = React.useState<AxisKey>('forward');
-  const [powerLimit, setPowerLimit] = React.useState<PowerLimitMsg>({
-    forward: 0.5,
-    rightward: 0.5,
-    upward: 0.5,
-    roll: 0.5,
-    pitch: 0.5,
-    yaw: 0.5,
-  });
-
-  React.useEffect(() => {
-    const unsubscribe = rosService.subscribePowerLimit((msg) => {
-      setPowerLimit(msg);
-    });
-    return unsubscribe;
-  }, []);
 
   const selectAxis = (axis: AxisKey) => {
     setSelectedAxis(axis);
@@ -63,7 +47,6 @@ export const ControlPanel: React.FC = memo(() => {
       [selectedAxis]: value,
     };
     setPowerLimit(next);
-    rosService.publishPowerLimit(next);
     addLog('info', `Pilot ${label} preset set to ${value.toFixed(1)}`);
   };
 
@@ -110,11 +93,11 @@ export const ControlPanel: React.FC = memo(() => {
               <span className="text-xs font-mono text-orange-200">{powerLimit[selectedAxis].toFixed(2)} / 1.0</span>
             </div>
             <div className="mt-2 grid grid-cols-4 gap-1">
-              {POWER_LEVELS.map((lvl) => {
+              {powerPresets[selectedAxis].map((lvl) => {
                 const active = Math.abs(powerLimit[selectedAxis] - lvl.value) < 0.001;
                 return (
                   <button
-                    key={`${selectedAxis}-${lvl.value}`}
+                    key={`${selectedAxis}-${lvl.label}`}
                     onClick={() => setSelectedAxisPreset(lvl.value)}
                     className={[
                       'px-1.5 py-1 rounded text-[10px] font-semibold border transition-colors',
