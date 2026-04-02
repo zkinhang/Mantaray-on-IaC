@@ -230,6 +230,10 @@
           K3S_URL=https://{{ master_ip }}:6443
           K3S_TOKEN={{ real_token }}
 
+    - name: Force sync OS time with Ansible Control Node
+      ansible.builtin.command: "date -s {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }}"
+      become: true
+
     - name: Start K3s Agent
       systemd:
         name: k3s-agent

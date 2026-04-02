@@ -4,11 +4,11 @@
             "sample_time_sec": 0.05,
             "step_time_sec": 0.3,
             "pitch": {
-                "kp": 1.0,
-                "ki": 0.05,
-                "kd": 1.0,
+                "kp": -20.0,
+                "ki": -5.0,
+                "kd": 0.0,
                 "setpoint": 0.0,
-                "output_limits": [-20.0, 20.0]
+                "output_limits": [0.0, 0.0]
             },
             "yaw": {
                 "kp": 0.7,
@@ -22,14 +22,14 @@
                 "ki": 0.0,
                 "kd": 1.0,
                 "setpoint": 0.0,
-                "output_limits": [-5.0, 5.0]
+                "output_limits": [0.0, 0.0]
             },
             "depth": {
-                "kp": 0.45,
-                "ki": 0.008,
-                "kd": 7.5,
+                "kp": 0.4,
+                "ki": 0.01,
+                "kd": 4.0,
                 "setpoint": null,
-                "output_limits": [0.0, 50.0]
+                "output_limits": [-50.0, 50.0]
             }
         }
     },
@@ -38,7 +38,7 @@
             "thrusterboard_config": {
                 "board_hw_id": "1A86:7523",
                 "port_name": "USB0",
-                "mapping": [2, 6, -4, -8, -5, 3, -1, 7]
+                "mapping": [7, 3, 6, -5, 2, -1, -4, -8]
             },
             "thruster_direction_matrices": {
                 "HOLD":           [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
@@ -72,17 +72,17 @@
         "ros__parameters": {
             "gripper_config": {
                 "dpad_power": 0.65,
-                "pwm_step": 30,
+                "pwm_step": 5,
 
-                "a_pwm_min": 550,
-                "a_pwm_max": 2450,
-                "b_pwm_min": 1000,
-                "b_pwm_max": 2000,
-                "c_pwm_min": 1700,
+                "a_pwm_min": 2000,
+                "a_pwm_max": 2200,
+                "b_pwm_min": 550,
+                "b_pwm_max": 2450,
+                "c_pwm_min": 550,
                 "c_pwm_max": 2450,
 
                 "initial_gripper_a_values": [1400.0, 1400.0, 1400.0],
-                "initial_gripper_b_values": [1400.0, 1400.0, 1400.0]
+                "initial_gripper_b_values": [1400.0, 2100.0, 1400.0]
             }
         }
     }
