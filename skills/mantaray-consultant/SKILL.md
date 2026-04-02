@@ -75,14 +75,15 @@ To maintain meticulous order, the project is structured as follows:
 - **Full Application Restart**: Add `-e "force_restart=true"` to the deploy command to force a rolling update of all pods following `ansible/vars/deployment-vars.yaml` (use for code changes or verifying a fresh state).
 
 ### Configuration
-- `ansible/config/robot_params.json`: Centralized PID gains, port assignments, and sensor offsets.
+- `ansible/config/robot_params.json`: Centralized PID gains, port assignments, and sensor offsets. **Note:** Recent updates (2026-04-02) have significantly recalibrated Pitch PID gains, Gripper PWM steps, and Thruster Mappings.
 - `ansible/vars/deployment-vars.yaml`: Manages container images and lists all active Kubernetes deployments for the application.
 - `ansible/vars/hardware-paths.yaml`: Maps physical peripheral devices (cameras, IMUs, serial ports) to container volumes.
-- `ansible/vars/infra-vars.yaml`: Defines cluster-wide settings, including installation paths, local registry ports, node labels, and physical network interface names.
+- `ansible/vars/infra-vars.yaml`: Defines cluster-wide settings, including installation paths, local registry ports, node labels, and physical network interface names. **Note:** Default IP schema has migrated to `192.168.10.x` for the dedicated ROV router environment.
 
 ## Debugging and Maintenance
 - **Cluster Diagnostics**: See [references/troubleshooting.md](references/troubleshooting.md).
 - **Network Recovery**: If internet access is lost after switching between eth and wlan, restart the system service: `sudo systemctl restart NetworkManager`.
+- **Time Synchronization**: `playbook-network-switch.yaml` now includes a task to force-sync agent OS time with the control node to prevent certificate/log mismatches.
 - **Hardware Integration**: See [references/hardware.md](references/hardware.md).
 - **ROS2 Packages**: See [references/ros2-packages.md](references/ros2-packages.md).
 
