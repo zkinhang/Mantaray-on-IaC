@@ -21,6 +21,18 @@ interface PowerPreset {
   value: number;
 }
 
+export type AxisKey = keyof PowerLimitMsg;
+
+export type PresetsRecord = {
+  global: PowerPreset[];
+  forward: PowerPreset[];
+  rightward: PowerPreset[];
+  upward: PowerPreset[];
+  roll: PowerPreset[];
+  pitch: PowerPreset[];
+  yaw: PowerPreset[];
+};
+
 interface RosContextType {
   isConnected: boolean;
   targetHost: string;
@@ -28,22 +40,32 @@ interface RosContextType {
   logs: LogEntry[];
   pidOn: boolean;
   powerLimit: PowerLimitMsg;
-  powerPresets: PowerPreset[];
+  powerPresets: PresetsRecord;
   updateTargetHost: (host: string) => void;
   addLog: (type: 'info' | 'warn' | 'error' | 'success', message: string) => void;
   togglePid: (status: boolean) => void;
   setPowerLimit: (powerLimit: PowerLimitMsg) => void;
-  updatePowerPresets: (presets: PowerPreset[]) => void;
+  updatePowerPresets: (presets: PresetsRecord) => void;
 }
 
 const RosContext = createContext<RosContextType | undefined>(undefined);
 
-const DEFAULT_PRESETS: PowerPreset[] = [
+const DEFAULT_PRESET_ARRAY: PowerPreset[] = [
   { label: 'LOW', value: 0.3 },
   { label: 'MED', value: 0.5 },
   { label: 'HIGH', value: 0.7 },
   { label: 'MAX', value: 1.0 },
 ];
+
+const DEFAULT_PRESETS_RECORD: PresetsRecord = {
+  global: [...DEFAULT_PRESET_ARRAY],
+  forward: [...DEFAULT_PRESET_ARRAY],
+  rightward: [...DEFAULT_PRESET_ARRAY],
+  upward: [...DEFAULT_PRESET_ARRAY],
+  roll: [...DEFAULT_PRESET_ARRAY],
+  pitch: [...DEFAULT_PRESET_ARRAY],
+  yaw: [...DEFAULT_PRESET_ARRAY],
+};
 
 export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
@@ -59,9 +81,29 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     pitch: 0.5,
     yaw: 0.5,
   });
-  const [powerPresets, setPowerPresetsState] = useState<PowerPreset[]>(() => {
+  const [powerPresets, setPowerPresetsState] = useState<PresetsRecord>(() => {
     const stored = localStorage.getItem('power_presets');
-    return stored ? JSON.parse(stored) : DEFAULT_PRESETS;
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          // migrate from old single-array format
+          return {
+            global: parsed,
+            forward: [...parsed],
+            rightward: [...parsed],
+            upward: [...parsed],
+            roll: [...parsed],
+            pitch: [...parsed],
+            yaw: [...parsed],
+          };
+        }
+        return { ...DEFAULT_PRESETS_RECORD, ...parsed };
+      } catch (e) {
+        return DEFAULT_PRESETS_RECORD;
+      }
+    }
+    return DEFAULT_PRESETS_RECORD;
   });
 
   useEffect(() => {
@@ -108,7 +150,7 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     rosService.publishPowerLimit(newPowerLimit);
   };
 
-  const updatePowerPresets = (newPresets: PowerPreset[]) => {
+  const updatePowerPresets = (newPresets: PresetsRecord) => {
     setPowerPresetsState(newPresets);
     localStorage.setItem('power_presets', JSON.stringify(newPresets));
   };

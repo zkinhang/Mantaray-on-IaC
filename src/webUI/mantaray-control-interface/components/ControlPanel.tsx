@@ -93,11 +93,11 @@ export const ControlPanel: React.FC = memo(() => {
               <span className="text-xs font-mono text-orange-200">{powerLimit[selectedAxis].toFixed(2)} / 1.0</span>
             </div>
             <div className="mt-2 grid grid-cols-4 gap-1">
-              {powerPresets.map((lvl) => {
+              {powerPresets[selectedAxis].map((lvl) => {
                 const active = Math.abs(powerLimit[selectedAxis] - lvl.value) < 0.001;
                 return (
                   <button
-                    key={`${selectedAxis}-${lvl.value}`}
+                    key={`${selectedAxis}-${lvl.label}`}
                     onClick={() => setSelectedAxisPreset(lvl.value)}
                     className={[
                       'px-1.5 py-1 rounded text-[10px] font-semibold border transition-colors',

@@ -29,13 +29,7 @@ interface PowerLimitMsg {
 }
 
 type AxisKey = keyof PowerLimitMsg;
-
-const POWER_LEVELS: { label: string; value: number }[] = [
-  { label: 'LOW',  value: 0.3 },
-  { label: 'MED',  value: 0.5 },
-  { label: 'HIGH', value: 0.7 },
-  { label: 'MAX',  value: 1.0 },
-];
+type PresetGroupKey = 'global' | AxisKey;
 
 const AXES: { key: AxisKey; label: string }[] = [
   { key: 'forward',   label: 'Forward' },
@@ -64,7 +58,7 @@ export const TelemetryPage: React.FC = () => {
     const syncValue = getSynchronizedValue(powerLimit);
     return syncValue !== null ? syncValue : 0.5;
   });
-  const [editingPresetIndex, setEditingPresetIndex] = useState<number | null>(null);
+  const [editingPreset, setEditingPreset] = useState<{ group: PresetGroupKey; index: number } | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
 
   // Update global level when powerLimit changes
@@ -75,23 +69,29 @@ export const TelemetryPage: React.FC = () => {
     }
   }, [powerLimit]);
 
-  const startEditingPreset = (index: number) => {
-    setEditingPresetIndex(index);
-    setEditingValue(powerPresets[index].value.toString());
+  const startEditingPreset = (group: PresetGroupKey, index: number) => {
+    setEditingPreset({ group, index });
+    setEditingValue(powerPresets[group][index].value.toString());
   };
 
-  const finishEditingPreset = (index: number) => {
+  const finishEditingPreset = () => {
+    if (!editingPreset) return;
+    const { group, index } = editingPreset;
     const newValue = Math.max(0, Math.min(1, parseFloat(editingValue) || 0));
-    const newPresets = [...powerPresets];
-    newPresets[index] = { ...newPresets[index], value: newValue };
-    newPresets.sort((a, b) => a.value - b.value);
+    
+    const newPresets = { ...powerPresets };
+    const groupPresets = [...newPresets[group]];
+    groupPresets[index] = { ...groupPresets[index], value: newValue };
+    groupPresets.sort((a, b) => a.value - b.value);
+    
+    newPresets[group] = groupPresets;
     updatePowerPresets(newPresets);
-    setEditingPresetIndex(null);
-    addLog('info', `[Telemetry] Preset updated: ${newPresets[index].label} → ${newValue.toFixed(2)}`);
+    setEditingPreset(null);
+    addLog('info', `[Telemetry] ${group} Preset updated: ${groupPresets[index].label} → ${newValue.toFixed(2)}`);
   };
 
   const cancelEditingPreset = () => {
-    setEditingPresetIndex(null);
+    setEditingPreset(null);
     setEditingValue('');
   };
 
@@ -145,10 +145,10 @@ export const TelemetryPage: React.FC = () => {
 
           {/* Power Buttons - 4 in a row */}
           <div className="flex gap-3">
-            {powerPresets.map((lvl, idx) => {
+            {powerPresets.global.map((lvl, idx) => {
               const synchronized = areAllAxesSynchronized(powerLimit);
               const active = synchronized && Math.abs(globalLevel - lvl.value) < 0.001;
-              const isEditing = editingPresetIndex === idx;
+              const isEditing = editingPreset?.group === 'global' && editingPreset.index === idx;
               return (
                 <div key={lvl.label} className="flex-1 flex flex-col items-center justify-center">
                   {isEditing ? (
@@ -159,9 +159,9 @@ export const TelemetryPage: React.FC = () => {
                       step="0.01"
                       value={editingValue}
                       onChange={(e) => setEditingValue(e.target.value)}
-                      onBlur={() => finishEditingPreset(idx)}
+                      onBlur={() => finishEditingPreset()}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') finishEditingPreset(idx);
+                        if (e.key === 'Enter') finishEditingPreset();
                         if (e.key === 'Escape') cancelEditingPreset();
                       }}
                       autoFocus
@@ -170,7 +170,7 @@ export const TelemetryPage: React.FC = () => {
                   ) : (
                     <button
                       onClick={() => applyGlobalLimit(lvl.value)}
-                      onDoubleClick={() => startEditingPreset(idx)}
+                      onDoubleClick={() => startEditingPreset('global', idx)}
                       title="Click to apply, double-click to edit preset"
                       className={[
                         'w-full flex flex-col items-center justify-center rounded font-semibold transition-all relative overflow-hidden py-3 px-2 border-2 min-h-16 cursor-pointer',
@@ -216,24 +216,45 @@ export const TelemetryPage: React.FC = () => {
 
                 {/* Power Buttons - 4 in a row, more compact */}
                 <div className="flex gap-2">
-                  {powerPresets.map((lvl) => {
+                  {powerPresets[a.key].map((lvl, idx) => {
                     const active = Math.abs(powerLimit[a.key] - lvl.value) < 0.001;
+                    const isEditing = editingPreset?.group === a.key && editingPreset.index === idx;
                     return (
-                      <button
-                        key={lvl.label}
-                        onClick={() => setAxisPower(a.key, lvl.value)}
-                        title="Click to apply preset"
-                        className={[
-                          'flex-1 rounded font-semibold transition-all relative overflow-hidden border-2 flex flex-col items-center justify-center py-2 px-0.5 text-xs min-h-12',
-                          active
-                            ? 'bg-k3s-primary/20 border-k3s-primary text-k3s-primary shadow-md shadow-k3s-primary/20'
-                            : 'bg-k3s-block border-k3s-border/40 text-k3s-muted hover:text-white hover:border-k3s-primary/40 hover:shadow-md',
-                        ].join(' ')}
-                      >
-                        <span className="font-bold text-xs">{lvl.label}</span>
-                        <span className="text-xs text-k3s-muted">{lvl.value.toFixed(2)}</span>
-                        {active && <StatusIndicator active size="sm" showText={false} className="absolute top-1 right-1" />}
-                      </button>
+                      <div key={lvl.label} className="flex-1 flex flex-col items-center justify-center">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={() => finishEditingPreset()}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') finishEditingPreset();
+                              if (e.key === 'Escape') cancelEditingPreset();
+                            }}
+                            autoFocus
+                            className="w-full px-1 py-1 rounded border border-k3s-primary bg-k3s-dark text-white font-semibold text-center text-[10px] focus:outline-none"
+                          />
+                        ) : (
+                          <button
+                            onClick={() => setAxisPower(a.key, lvl.value)}
+                            onDoubleClick={() => startEditingPreset(a.key, idx)}
+                            title="Click to apply preset, double-click to edit"
+                            className={[
+                              'w-full flex-1 rounded font-semibold transition-all relative overflow-hidden border-2 flex flex-col items-center justify-center py-2 px-0.5 text-xs min-h-12 cursor-pointer',
+                              active
+                                ? 'bg-k3s-primary/20 border-k3s-primary text-k3s-primary shadow-md shadow-k3s-primary/20'
+                                : 'bg-k3s-block border-k3s-border/40 text-k3s-muted hover:text-white hover:border-k3s-primary/40 hover:shadow-md',
+                            ].join(' ')}
+                          >
+                            <span className="font-bold text-xs">{lvl.label}</span>
+                            <span className="text-xs text-k3s-muted">{lvl.value.toFixed(2)}</span>
+                            {active && <StatusIndicator active size="sm" showText={false} className="absolute top-1 right-1" />}
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
