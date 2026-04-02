@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { rosService } from '../services/rosService';
+import { useRos } from '../context/RosContext';
 
 // StatusIndicator Component - inline for consistency
 const StatusIndicator: React.FC<{ active: boolean; label?: string; size?: 'sm' | 'md'; showText?: boolean; className?: string }> = ({
@@ -46,60 +46,34 @@ const AXES: { key: AxisKey; label: string }[] = [
   { key: 'yaw',       label: 'Yaw' },
 ];
 
+// Helper: Check if all axes are synchronized to the same value
+const areAllAxesSynchronized = (limits: PowerLimitMsg): boolean => {
+  const values = [limits.forward, limits.rightward, limits.upward, limits.roll, limits.pitch, limits.yaw];
+  return values.every((v) => Math.abs(v - values[0]) < 0.001);
+};
+
+// Helper: Get the synchronized value if all axes match, otherwise undefined
+const getSynchronizedValue = (limits: PowerLimitMsg): number | null => {
+  return areAllAxesSynchronized(limits) ? limits.forward : null;
+};
+
 export const TelemetryPage: React.FC = () => {
-  const [powerLimit, setPowerLimit] = useState<PowerLimitMsg>({
-    forward: 0.5,
-    rightward: 0.5,
-    upward: 0.5,
-    roll: 0.5,
-    pitch: 0.5,
-    yaw: 0.5,
-  });
+  const { powerLimit, setPowerLimit, addLog } = useRos();
 
   const [globalLevel, setGlobalLevel] = useState<number>(0.5);
 
-  // Helper: Check if all axes are synchronized to the same value
-  const areAllAxesSynchronized = (limits: PowerLimitMsg): boolean => {
-    const values = [limits.forward, limits.rightward, limits.upward, limits.roll, limits.pitch, limits.yaw];
-    return values.every((v) => Math.abs(v - values[0]) < 0.001);
-  };
-
-  // Helper: Get the synchronized value if all axes match, otherwise undefined
-  const getSynchronizedValue = (limits: PowerLimitMsg): number | null => {
-    return areAllAxesSynchronized(limits) ? limits.forward : null;
-  };
-
-  // Subscribe to power limit updates from ROS channel
+  // Update global level when powerLimit changes
   useEffect(() => {
-    const unsubscribe = rosService.subscribePowerLimit((receivedPowerLimit) => {
-      console.log('[TelemetryPage] Received power limit update:', receivedPowerLimit);
-      setPowerLimit(receivedPowerLimit);
-      // Update global level only if all axes are synchronized
-      const syncValue = getSynchronizedValue(receivedPowerLimit);
-      if (syncValue !== null) {
-        setGlobalLevel(syncValue);
-      }
-    });
-
-    return unsubscribe;
-  }, []);
-
-  const publishPowerLimit = (msg: PowerLimitMsg) => {
-    rosService.publishPowerLimit(msg);
-  };
+    const syncValue = getSynchronizedValue(powerLimit);
+    if (syncValue !== null) {
+      setGlobalLevel(syncValue);
+    }
+  }, [powerLimit]);
 
   const setAxisPower = (axis: AxisKey, value: number) => {
-    setPowerLimit((prev) => {
-      const updated: PowerLimitMsg = { ...prev, [axis]: value };
-      publishPowerLimit(updated);
-      // Update global level to reflect the new state
-      const syncValue = getSynchronizedValue(updated);
-      if (syncValue !== null) {
-        setGlobalLevel(syncValue);
-      }
-      console.info(`[TelemetryPage] ${axis} → ${value}`);
-      return updated;
-    });
+    const updated: PowerLimitMsg = { ...powerLimit, [axis]: value };
+    setPowerLimit(updated);
+    addLog('info', `[Telemetry] ${axis} → ${value}`);
   };
 
   const applyGlobalLimit = (value: number) => {
@@ -113,8 +87,7 @@ export const TelemetryPage: React.FC = () => {
       yaw: value,
     };
     setPowerLimit(updated);
-    publishPowerLimit(updated);
-    console.info(`[TelemetryPage] global → ${value}`);
+    addLog('info', `[Telemetry] global → ${value}`);
   };
 
   return (

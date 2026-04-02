@@ -7,15 +7,26 @@ interface LogEntry {
   timestamp: string;
 }
 
+interface PowerLimitMsg {
+  forward: number;
+  rightward: number;
+  upward: number;
+  roll: number;
+  pitch: number;
+  yaw: number;
+}
+
 interface RosContextType {
   isConnected: boolean;
   targetHost: string;
   recentHosts: string[];
   logs: LogEntry[];
   pidOn: boolean;
+  powerLimit: PowerLimitMsg;
   updateTargetHost: (host: string) => void;
   addLog: (type: 'info' | 'warn' | 'error' | 'success', message: string) => void;
   togglePid: (status: boolean) => void;
+  setPowerLimit: (powerLimit: PowerLimitMsg) => void;
 }
 
 const RosContext = createContext<RosContextType | undefined>(undefined);
@@ -26,6 +37,14 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [recentHosts, setRecentHosts] = useState(rosService.getRecentHosts());
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [pidOn, setPidOn] = useState(true);
+  const [powerLimit, setPowerLimitState] = useState<PowerLimitMsg>({
+    forward: 0.5,
+    rightward: 0.5,
+    upward: 0.5,
+    roll: 0.5,
+    pitch: 0.5,
+    yaw: 0.5,
+  });
 
   useEffect(() => {
     const unsubStatus = rosService.subscribeStatus((connected) => {
@@ -40,10 +59,15 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const unsubPid = rosService.subscribePid(setPidOn);
 
+    const unsubPowerLimit = rosService.subscribePowerLimit((receivedPowerLimit) => {
+      setPowerLimitState(receivedPowerLimit);
+    });
+
     return () => {
       unsubStatus();
       unsubLogs();
       unsubPid();
+      unsubPowerLimit();
     };
   }, []);
 
@@ -61,8 +85,13 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     rosService.publishPidToggle(status);
   };
 
+  const setPowerLimit = (newPowerLimit: PowerLimitMsg) => {
+    setPowerLimitState(newPowerLimit);
+    rosService.publishPowerLimit(newPowerLimit);
+  };
+
   return (
-    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, updateTargetHost, addLog, togglePid }}>
+    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, powerLimit, updateTargetHost, addLog, togglePid, setPowerLimit }}>
       {children}
     </RosContext.Provider>
   );

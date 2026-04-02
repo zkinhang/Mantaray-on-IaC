@@ -2,7 +2,6 @@
 import { Activity, Power, ShieldAlert } from 'lucide-react';
 import { MovementControl } from './MovementControl';
 import { useRos } from '../context/RosContext';
-import { rosService } from '../services/rosService';
 
 interface PowerLimitMsg {
   forward: number;
@@ -32,23 +31,8 @@ const AXES: { key: AxisKey; label: string }[] = [
 ];
 
 export const ControlPanel: React.FC = memo(() => {
-  const { pidOn, togglePid, addLog } = useRos();
+  const { pidOn, togglePid, addLog, powerLimit, setPowerLimit } = useRos();
   const [selectedAxis, setSelectedAxis] = React.useState<AxisKey>('forward');
-  const [powerLimit, setPowerLimit] = React.useState<PowerLimitMsg>({
-    forward: 0.5,
-    rightward: 0.5,
-    upward: 0.5,
-    roll: 0.5,
-    pitch: 0.5,
-    yaw: 0.5,
-  });
-
-  React.useEffect(() => {
-    const unsubscribe = rosService.subscribePowerLimit((msg) => {
-      setPowerLimit(msg);
-    });
-    return unsubscribe;
-  }, []);
 
   const selectAxis = (axis: AxisKey) => {
     setSelectedAxis(axis);
@@ -63,7 +47,6 @@ export const ControlPanel: React.FC = memo(() => {
       [selectedAxis]: value,
     };
     setPowerLimit(next);
-    rosService.publishPowerLimit(next);
     addLog('info', `Pilot ${label} preset set to ${value.toFixed(1)}`);
   };
 
