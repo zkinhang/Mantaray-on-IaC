@@ -31,7 +31,7 @@ const AXES: { key: AxisKey; label: string }[] = [
 ];
 
 export const ControlPanel: React.FC = memo(() => {
-  const { pidOn, togglePid, addLog, powerLimit, setPowerLimit } = useRos();
+  const { pidOn, togglePid, addLog, powerLimit, setPowerLimit, powerPresets } = useRos();
   const [selectedAxis, setSelectedAxis] = React.useState<AxisKey>('forward');
 
   const selectAxis = (axis: AxisKey) => {
@@ -93,7 +93,7 @@ export const ControlPanel: React.FC = memo(() => {
               <span className="text-xs font-mono text-orange-200">{powerLimit[selectedAxis].toFixed(2)} / 1.0</span>
             </div>
             <div className="mt-2 grid grid-cols-4 gap-1">
-              {POWER_LEVELS.map((lvl) => {
+              {powerPresets.map((lvl) => {
                 const active = Math.abs(powerLimit[selectedAxis] - lvl.value) < 0.001;
                 return (
                   <button

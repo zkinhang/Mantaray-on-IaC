@@ -16,6 +16,11 @@ interface PowerLimitMsg {
   yaw: number;
 }
 
+interface PowerPreset {
+  label: string;
+  value: number;
+}
+
 interface RosContextType {
   isConnected: boolean;
   targetHost: string;
@@ -23,13 +28,22 @@ interface RosContextType {
   logs: LogEntry[];
   pidOn: boolean;
   powerLimit: PowerLimitMsg;
+  powerPresets: PowerPreset[];
   updateTargetHost: (host: string) => void;
   addLog: (type: 'info' | 'warn' | 'error' | 'success', message: string) => void;
   togglePid: (status: boolean) => void;
   setPowerLimit: (powerLimit: PowerLimitMsg) => void;
+  updatePowerPresets: (presets: PowerPreset[]) => void;
 }
 
 const RosContext = createContext<RosContextType | undefined>(undefined);
+
+const DEFAULT_PRESETS: PowerPreset[] = [
+  { label: 'LOW', value: 0.3 },
+  { label: 'MED', value: 0.5 },
+  { label: 'HIGH', value: 0.7 },
+  { label: 'MAX', value: 1.0 },
+];
 
 export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
@@ -44,6 +58,10 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     roll: 0.5,
     pitch: 0.5,
     yaw: 0.5,
+  });
+  const [powerPresets, setPowerPresetsState] = useState<PowerPreset[]>(() => {
+    const stored = localStorage.getItem('power_presets');
+    return stored ? JSON.parse(stored) : DEFAULT_PRESETS;
   });
 
   useEffect(() => {
@@ -90,8 +108,13 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     rosService.publishPowerLimit(newPowerLimit);
   };
 
+  const updatePowerPresets = (newPresets: PowerPreset[]) => {
+    setPowerPresetsState(newPresets);
+    localStorage.setItem('power_presets', JSON.stringify(newPresets));
+  };
+
   return (
-    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, powerLimit, updateTargetHost, addLog, togglePid, setPowerLimit }}>
+    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, powerLimit, powerPresets, updateTargetHost, addLog, togglePid, setPowerLimit, updatePowerPresets }}>
       {children}
     </RosContext.Provider>
   );
