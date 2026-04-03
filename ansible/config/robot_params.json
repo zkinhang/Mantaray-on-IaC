@@ -72,14 +72,14 @@
         "ros__parameters": {
             "gripper_config": {
                 "dpad_power": 0.65,
-                "a_pwm_step": 20,
+                "a_pwm_step": 30,
                 "b_pwm_step": 20,
-                "c_pwm_step": 20,
+                "c_pwm_step": 40,
 
-                "a_pwm_min": 2000,
-                "a_pwm_max": 2200,
-                "b_pwm_min": 550,
-                "b_pwm_max": 2450,
+                "a_pwm_min": 550,
+                "a_pwm_max": 2450,
+                "b_pwm_min": 2000,
+                "b_pwm_max": 2200,
                 "c_pwm_min": 550,
                 "c_pwm_max": 2450,
 
