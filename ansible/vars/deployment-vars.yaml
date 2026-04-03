@@ -1,4 +1,4 @@
-main_ros_image: "mantaray.local:5000/manta-ray-ros:latest"
+main_ros_image: "mantaray.local:5000/manta-ray-ros:0.98"
 microros_image: "mantaray.local:5000/microros-with-esptool:0.1"
 web_ui_image: "mantaray.local:5000/mantaray-control-interface:latest"
 

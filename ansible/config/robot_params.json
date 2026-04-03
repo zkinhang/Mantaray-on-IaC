@@ -15,7 +15,7 @@
                 "ki": 0.01,
                 "kd": 0.1,
                 "setpoint": 0.0,
-                "output_limits": [0.0, 0.0]
+                "output_limits": [-50.0, 50.0]
             },
             "roll": {
                 "kp": 5.0,
@@ -25,9 +25,9 @@
                 "output_limits": [0.0, 0.0]
             },
             "depth": {
-                "kp": 0.4,
-                "ki": 0.01,
-                "kd": 4.0,
+                "kp": 0.37,
+                "ki": 0.17,
+                "kd": 3.1,
                 "setpoint": null,
                 "output_limits": [-50.0, 50.0]
             }
@@ -72,17 +72,22 @@
         "ros__parameters": {
             "gripper_config": {
                 "dpad_power": 0.65,
-                "pwm_step": 5,
+                "a_pwm_step": 30,
+                "b_pwm_step": 20,
+                "c_pwm_step": 40,
 
-                "a_pwm_min": 2000,
-                "a_pwm_max": 2200,
-                "b_pwm_min": 550,
-                "b_pwm_max": 2450,
+                "a_pwm_min": 550,
+                "a_pwm_max": 2450,
+                "b_pwm_min": 2000,
+                "b_pwm_max": 2200,
                 "c_pwm_min": 550,
                 "c_pwm_max": 2450,
 
                 "initial_gripper_a_values": [1400.0, 1400.0, 1400.0],
-                "initial_gripper_b_values": [1400.0, 2100.0, 1400.0]
+                "initial_gripper_b_values": [1400.0, 2100.0, 1400.0],
+
+                "gripper_a_mapping": [0, 1, 2],
+                "gripper_b_mapping": [0, 1, 2]
             }
         }
     }
