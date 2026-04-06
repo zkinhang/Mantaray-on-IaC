@@ -27,6 +27,10 @@ class command_decomposer(Node):
         # Declare mapping arrays
         self.declare_parameter('gripper_config.gripper_a_mapping', [0, 1, 2])
         self.declare_parameter('gripper_config.gripper_b_mapping', [0, 1, 2])
+        
+        # Declare continuous servo mapping arrays (1 = continuous, 0 = standard)
+        self.declare_parameter('gripper_config.gripper_a_continuous_mapping', [0, 0, 0])
+        self.declare_parameter('gripper_config.gripper_b_continuous_mapping', [0, 0, 0])
 
         # Get parameter values from external
         self.dpad_power = self.get_parameter('gripper_config.dpad_power').get_parameter_value().double_value
@@ -49,6 +53,10 @@ class command_decomposer(Node):
         # Get mapping arrays
         self.mapping_a = self.get_parameter('gripper_config.gripper_a_mapping').get_parameter_value().integer_array_value
         self.mapping_b = self.get_parameter('gripper_config.gripper_b_mapping').get_parameter_value().integer_array_value
+        
+        # Get continuous servo mapping arrays
+        self.continuous_a = self.get_parameter('gripper_config.gripper_a_continuous_mapping').get_parameter_value().integer_array_value
+        self.continuous_b = self.get_parameter('gripper_config.gripper_b_continuous_mapping').get_parameter_value().integer_array_value
 
         self.gripper_subscriber = self.create_subscription(
             Twist, 
@@ -85,6 +93,68 @@ class command_decomposer(Node):
                 mapped_values[mapping[i]] = val
         return mapped_values
 
+    def _is_continuous_servo(self, servo_index: int, is_gripper_b: bool) -> bool:
+        """Check if a servo is configured as continuous."""
+        continuous_map = self.continuous_b if is_gripper_b else self.continuous_a
+        if servo_index < len(continuous_map):
+            return continuous_map[servo_index] == 1
+        return False
+
+    def _set_continuous_servo_pwm(self, servo_index: int, direction: float, speed_percent: float, 
+                                   pwm_min: float, pwm_max: float) -> float:
+        """
+        Calculate PWM value for continuous servo based on direction and speed percentage.
+        
+        Args:
+            servo_index: Index of the servo
+            direction: -1.0 (backward), 0.0 (neutral), or 1.0 (forward)
+            speed_percent: Speed percentage (step value as percentage of range, 0-100)
+            pwm_min: Minimum PWM value
+            pwm_max: Maximum PWM value
+            
+        Returns:
+            Target PWM value for the continuous servo
+        """
+        mid_pwm = (pwm_min + pwm_max) / 2.0
+        speed_ratio = speed_percent / 100.0
+        
+        if direction > 0:
+            # Forward: move toward max
+            return mid_pwm + (pwm_max - mid_pwm) * speed_ratio
+        elif direction < 0:
+            # Backward: move toward min
+            return mid_pwm - (mid_pwm - pwm_min) * speed_ratio
+        else:
+            # No input: neutral position
+            return mid_pwm
+
+    def _update_servo_value(self, current_val: float, direction: float, step: float,
+                           pwm_min: float, pwm_max: float, is_continuous: bool) -> float:
+        """
+        Update servo value based on whether it's continuous or standard.
+        
+        Args:
+            current_val: Current PWM value
+            direction: -1.0 (backward), 0.0 (neutral), or 1.0 (forward)
+            step: Step value (as percentage for continuous, as PWM units for standard)
+            pwm_min: Minimum PWM value
+            pwm_max: Maximum PWM value
+            is_continuous: Whether this is a continuous servo
+            
+        Returns:
+            Updated PWM value
+        """
+        if is_continuous:
+            return self._set_continuous_servo_pwm(0, direction, step, pwm_min, pwm_max)
+        else:
+            # Standard servo: use stepping logic
+            if direction > 0:
+                return min(current_val + step, pwm_max)
+            elif direction < 0:
+                return max(current_val - step, pwm_min)
+            else:
+                return current_val
+
     # map the dpad values to the coeffieient for calculating pwm values
     def read_dpad(self, value: float) -> float:
         if value == 0.0:
@@ -98,22 +168,43 @@ class command_decomposer(Node):
 
     def gripper_listener_callback(self, msg: Twist):
         # Process a (linear.x and linear.y)
+        is_a_continuous = self._is_continuous_servo(0, is_gripper_b=False)
         if msg.linear.x > 0 and msg.linear.y <= 0:
-            self.gripper_values[0] = min(self.gripper_values[0] + self.a_pwm_step, self.a_pwm_max)
+            direction = 1.0
         elif msg.linear.y > 0 and msg.linear.x <= 0:
-            self.gripper_values[0] = max(self.gripper_values[0] - self.a_pwm_step, self.a_pwm_min)
+            direction = -1.0
+        else:
+            direction = 0.0
+        self.gripper_values[0] = self._update_servo_value(
+            self.gripper_values[0], direction, self.a_pwm_step,
+            self.a_pwm_min, self.a_pwm_max, is_a_continuous
+        )
             
         # Process b (linear.z and angular.z)
+        is_b_continuous = self._is_continuous_servo(1, is_gripper_b=False)
         if msg.linear.z > 0 and msg.angular.z <= 0:
-            self.gripper_values[1] = min(self.gripper_values[1] + self.b_pwm_step, self.b_pwm_max)
+            direction = 1.0
         elif msg.angular.z > 0 and msg.linear.z <= 0:
-            self.gripper_values[1] = max(self.gripper_values[1] - self.b_pwm_step, self.b_pwm_min)
+            direction = -1.0
+        else:
+            direction = 0.0
+        self.gripper_values[1] = self._update_servo_value(
+            self.gripper_values[1], direction, self.b_pwm_step,
+            self.b_pwm_min, self.b_pwm_max, is_b_continuous
+        )
             
         # Process c (angular.x and angular.y)
+        is_c_continuous = self._is_continuous_servo(2, is_gripper_b=False)
         if msg.angular.x > 0 and msg.angular.y <= 0:
-            self.gripper_values[2] = min(self.gripper_values[2] + self.c_pwm_step, self.c_pwm_max)
+            direction = 1.0
         elif msg.angular.y > 0 and msg.angular.x <= 0:
-            self.gripper_values[2] = max(self.gripper_values[2] - self.c_pwm_step, self.c_pwm_min)
+            direction = -1.0
+        else:
+            direction = 0.0
+        self.gripper_values[2] = self._update_servo_value(
+            self.gripper_values[2], direction, self.c_pwm_step,
+            self.c_pwm_min, self.c_pwm_max, is_c_continuous
+        )
 
         # Publish the gripper values
         gripper_command = Float32MultiArray()
@@ -125,22 +216,43 @@ class command_decomposer(Node):
         
     def sec_gripper_listener_callback(self, msg: Twist):
         # Process a (linear.x and linear.y)
+        is_a_continuous = self._is_continuous_servo(0, is_gripper_b=True)
         if msg.linear.x > 0 and msg.linear.y <= 0:
-            self.sec_gripper_values[0] = min(self.sec_gripper_values[0] + self.a_pwm_step, self.a_pwm_max)
+            direction = 1.0
         elif msg.linear.y > 0 and msg.linear.x <= 0:
-            self.sec_gripper_values[0] = max(self.sec_gripper_values[0] - self.b_pwm_step, self.a_pwm_min)
+            direction = -1.0
+        else:
+            direction = 0.0
+        self.sec_gripper_values[0] = self._update_servo_value(
+            self.sec_gripper_values[0], direction, self.a_pwm_step,
+            self.a_pwm_min, self.a_pwm_max, is_a_continuous
+        )
             
-        # Process b (linear.z and angular.z)      
+        # Process b (linear.z and angular.z)
+        is_b_continuous = self._is_continuous_servo(1, is_gripper_b=True)
         if msg.linear.z > 0 and msg.angular.z <= 0:
-            self.sec_gripper_values[1] = min(self.sec_gripper_values[1] + self.b_pwm_step, self.b_pwm_max)
+            direction = 1.0
         elif msg.angular.z > 0 and msg.linear.z <= 0:
-            self.sec_gripper_values[1] = max(self.sec_gripper_values[1] - self.b_pwm_step, self.b_pwm_min)
+            direction = -1.0
+        else:
+            direction = 0.0
+        self.sec_gripper_values[1] = self._update_servo_value(
+            self.sec_gripper_values[1], direction, self.b_pwm_step,
+            self.b_pwm_min, self.b_pwm_max, is_b_continuous
+        )
             
         # Process c (angular.x and angular.y)
+        is_c_continuous = self._is_continuous_servo(2, is_gripper_b=True)
         if msg.angular.x > 0 and msg.angular.y <= 0:
-            self.sec_gripper_values[2] = min(self.sec_gripper_values[2] + self.c_pwm_step, self.c_pwm_max)
+            direction = 1.0
         elif msg.angular.y > 0 and msg.angular.x <= 0:
-            self.sec_gripper_values[2] = max(self.sec_gripper_values[2] - self.c_pwm_step, self.c_pwm_min)
+            direction = -1.0
+        else:
+            direction = 0.0
+        self.sec_gripper_values[2] = self._update_servo_value(
+            self.sec_gripper_values[2], direction, self.c_pwm_step,
+            self.c_pwm_min, self.c_pwm_max, is_c_continuous
+        )
 
         # Publish the sec_gripper values
         sec_gripper_command = Float32MultiArray()
