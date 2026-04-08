@@ -12,8 +12,8 @@ class command_decomposer(Node):
         self.declare_parameter('gripper_config.dpad_power', 0.65)
         self.declare_parameter('gripper_config.a_pwm_min', 550)
         self.declare_parameter('gripper_config.a_pwm_max', 2450)
-        self.declare_parameter('gripper_config.b_pwm_min', 1000)
-        self.declare_parameter('gripper_config.b_pwm_max', 2000)
+        self.declare_parameter('gripper_config.b_pwm_min', 550)
+        self.declare_parameter('gripper_config.b_pwm_max', 2450)
         self.declare_parameter('gripper_config.c_pwm_min', 1700)
         self.declare_parameter('gripper_config.c_pwm_max', 2450)
         
@@ -79,8 +79,17 @@ class command_decomposer(Node):
             10)
         
         # Initialize gripper positions using parameters
-        self.gripper_values = list(self.initial_a) # Use loaded initial values
-        self.sec_gripper_values = list(self.initial_b)
+        # For continuous servos, start at neutral (mid PWM); for standard servos, use initial values
+        self.gripper_values = self._initialize_servo_values(
+            self.initial_a, self.continuous_a, 
+            [self.a_pwm_min, self.b_pwm_min, self.c_pwm_min],
+            [self.a_pwm_max, self.b_pwm_max, self.c_pwm_max]
+        )
+        self.sec_gripper_values = self._initialize_servo_values(
+            self.initial_b, self.continuous_b,
+            [self.a_pwm_min, self.b_pwm_min, self.c_pwm_min],
+            [self.a_pwm_max, self.b_pwm_max, self.c_pwm_max]
+        )
 
         self.get_logger().info(f"Gripper decomposer init done. DPAD Power: {self.dpad_power}, a_step: {self.a_pwm_step}")
         
@@ -92,6 +101,23 @@ class command_decomposer(Node):
             if i < len(mapping):
                 mapped_values[mapping[i]] = val
         return mapped_values
+
+    def _initialize_servo_values(self, initial_values: list, continuous_map: list, 
+                                 pwm_mins: list, pwm_maxs: list) -> list:
+        """
+        Initialize servo values. Continuous servos start at neutral (mid PWM),
+        standard servos use the provided initial values.
+        """
+        result = []
+        for i, initial_val in enumerate(initial_values):
+            if i < len(continuous_map) and continuous_map[i] == 1:
+                # Continuous servo: initialize to neutral
+                mid_pwm = (pwm_mins[i] + pwm_maxs[i]) / 2.0
+                result.append(mid_pwm)
+            else:
+                # Standard servo: use initial value
+                result.append(initial_val)
+        return result
 
     def _is_continuous_servo(self, servo_index: int, is_gripper_b: bool) -> bool:
         """Check if a servo is configured as continuous."""
@@ -105,10 +131,15 @@ class command_decomposer(Node):
         """
         Calculate PWM value for continuous servo based on direction and speed percentage.
         
+        For continuous servos:
+        - Neutral (0 direction): Returns mid PWM
+        - Forward (+1): Returns mid + (max-mid) * speed_ratio
+        - Backward (-1): Returns mid - (mid-min) * speed_ratio
+        
         Args:
             servo_index: Index of the servo
             direction: -1.0 (backward), 0.0 (neutral), or 1.0 (forward)
-            speed_percent: Speed percentage (step value as percentage of range, 0-100)
+            speed_percent: Speed percentage (0-100, where 100 = full speed from neutral)
             pwm_min: Minimum PWM value
             pwm_max: Maximum PWM value
             
@@ -117,16 +148,19 @@ class command_decomposer(Node):
         """
         mid_pwm = (pwm_min + pwm_max) / 2.0
         speed_ratio = speed_percent / 100.0
+        speed_ratio = max(0.0, min(1.0, speed_ratio))  # Clamp between 0 and 1
         
         if direction > 0:
             # Forward: move toward max
-            return mid_pwm + (pwm_max - mid_pwm) * speed_ratio
+            target_pwm = mid_pwm + (pwm_max - mid_pwm) * speed_ratio
         elif direction < 0:
             # Backward: move toward min
-            return mid_pwm - (mid_pwm - pwm_min) * speed_ratio
+            target_pwm = mid_pwm - (mid_pwm - pwm_min) * speed_ratio
         else:
             # No input: neutral position
-            return mid_pwm
+            target_pwm = mid_pwm
+            
+        return target_pwm
 
     def _update_servo_value(self, current_val: float, direction: float, step: float,
                            pwm_min: float, pwm_max: float, is_continuous: bool) -> float:
@@ -212,7 +246,14 @@ class command_decomposer(Node):
         mapped_values = self._apply_mapping(self.gripper_values, self.mapping_a)
         gripper_command.data = [float(v) for v in mapped_values] # Ensure data is float
         self.gripper_publisher.publish(gripper_command)
-        self.get_logger().info(f"gripper A raw: {self.gripper_values}, mapped: {mapped_values}")
+        
+        # Log continuous servo status in one line
+        continuous_info = []
+        for i in range(3):
+            if self._is_continuous_servo(i, is_gripper_b=False):
+                continuous_info.append(f"S{i}:{self.gripper_values[i]:.0f}")
+        if continuous_info:
+            self.get_logger().info(f"Gripper A continuous - {', '.join(continuous_info)} PWM")
         
     def sec_gripper_listener_callback(self, msg: Twist):
         # Process a (linear.x and linear.y)
@@ -260,7 +301,14 @@ class command_decomposer(Node):
         mapped_sec_values = self._apply_mapping(self.sec_gripper_values, self.mapping_b)
         sec_gripper_command.data = [float(v) for v in mapped_sec_values] # Ensure data is float
         self.sec_gripper_publisher.publish(sec_gripper_command)
-        self.get_logger().info(f"gripper B raw: {self.sec_gripper_values}, mapped: {mapped_sec_values}")
+        
+        # Log continuous servo status in one line
+        continuous_info = []
+        for i in range(3):
+            if self._is_continuous_servo(i, is_gripper_b=True):
+                continuous_info.append(f"S{i}:{self.sec_gripper_values[i]:.0f}")
+        if continuous_info:
+            self.get_logger().info(f"Gripper B continuous - {', '.join(continuous_info)} PWM")
 
 def main(args=None):
     # ROS2 initialization
