@@ -73,21 +73,24 @@
             "gripper_config": {
                 "dpad_power": 0.65,
                 "a_pwm_step": 30,
-                "b_pwm_step": 20,
-                "c_pwm_step": 40,
+                "b_pwm_step": 85,
+                "c_pwm_step": 50,
 
                 "a_pwm_min": 550,
                 "a_pwm_max": 2450,
-                "b_pwm_min": 2000,
-                "b_pwm_max": 2200,
+                "b_pwm_min": 550,
+                "b_pwm_max": 2450,
                 "c_pwm_min": 550,
                 "c_pwm_max": 2450,
 
                 "initial_gripper_a_values": [1400.0, 1400.0, 1400.0],
-                "initial_gripper_b_values": [1400.0, 2100.0, 1400.0],
+                "initial_gripper_b_values": [1400.0, 1400.0, 1400.0],
 
                 "gripper_a_mapping": [0, 1, 2],
-                "gripper_b_mapping": [0, 1, 2]
+                "gripper_b_mapping": [0, 1, 2],
+
+                "gripper_a_continuous_mapping": [0, 1, 1],
+                "gripper_b_continuous_mapping": [0, 1, 1]
             }
         }
     }

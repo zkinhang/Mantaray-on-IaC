@@ -19,7 +19,7 @@
         namespace: "{{ k8s_namespace | default('default') }}"
       vars:
         robot_vars: "{{ robot_config }}" # Pass the JSON data to the template
-      notify: Restart nodes that use parameters
+      notify: Restart pods that use parameters
 
     - name: Apply application-level Services
       kubernetes.core.k8s:
@@ -52,7 +52,7 @@
       when: force_restart | default(false) | bool
 
   handlers:
-      - name: Restart nodes that use parameters
+      - name: Restart pods that use parameters
         kubernetes.core.k8s:
           state: patched  # Tell the module we are just patching
           kind: Deployment
