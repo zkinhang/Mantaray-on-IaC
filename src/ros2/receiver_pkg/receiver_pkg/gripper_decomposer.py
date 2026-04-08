@@ -20,6 +20,10 @@ class command_decomposer(Node):
         self.declare_parameter('gripper_config.a_pwm_step', 30)
         self.declare_parameter('gripper_config.b_pwm_step', 30)
         self.declare_parameter('gripper_config.c_pwm_step', 30)
+        # Servo lock compensator: when enabled, servo A follows servo B with this ratio.
+        # Example: ratio 4.0 means B:1 turn -> A:4 turns.
+        self.declare_parameter('gripper_config.lock_ab_motion', True)
+        self.declare_parameter('gripper_config.lock_ab_ratio', 4.0)
         # Declare initial values as float arrays
         self.declare_parameter('gripper_config.initial_gripper_a_values', [1400.0, 1400.0, 1400.0])
         self.declare_parameter('gripper_config.initial_gripper_b_values', [1400.0, 1400.0, 1400.0])
@@ -45,6 +49,8 @@ class command_decomposer(Node):
         self.a_pwm_step = self.get_parameter('gripper_config.a_pwm_step').get_parameter_value().integer_value
         self.b_pwm_step = self.get_parameter('gripper_config.b_pwm_step').get_parameter_value().integer_value
         self.c_pwm_step = self.get_parameter('gripper_config.c_pwm_step').get_parameter_value().integer_value
+        self.lock_ab_motion = self.get_parameter('gripper_config.lock_ab_motion').get_parameter_value().bool_value
+        self.lock_ab_ratio = self.get_parameter('gripper_config.lock_ab_ratio').get_parameter_value().double_value
         
         # Get initial values as lists of floats
         self.initial_a = self.get_parameter('gripper_config.initial_gripper_a_values').get_parameter_value().double_array_value
@@ -189,6 +195,30 @@ class command_decomposer(Node):
             else:
                 return current_val
 
+    def _get_axis_direction(self, positive_axis: float, negative_axis: float) -> float:
+        """Convert two opposing axes into a single direction value."""
+        if positive_axis > 0 and negative_axis <= 0:
+            return 1.0
+        elif negative_axis > 0 and positive_axis <= 0:
+            return -1.0
+        else:
+            return 0.0
+
+    def _apply_ab_compensator(self, values: list, b_direction: float, is_gripper_b: bool) -> None:
+        """
+        Lock servo A motion to servo B motion using the configured ratio.
+        Ratio is interpreted as A_speed = B_speed * ratio.
+        """
+        if not self.lock_ab_motion:
+            return
+
+        is_a_continuous = self._is_continuous_servo(0, is_gripper_b=is_gripper_b)
+        compensated_a_step = self.b_pwm_step * self.lock_ab_ratio
+        values[0] = self._update_servo_value(
+            values[0], b_direction, compensated_a_step,
+            self.a_pwm_min, self.a_pwm_max, is_a_continuous
+        )
+
     # map the dpad values to the coeffieient for calculating pwm values
     def read_dpad(self, value: float) -> float:
         if value == 0.0:
@@ -202,39 +232,27 @@ class command_decomposer(Node):
 
     def gripper_listener_callback(self, msg: Twist):
         # Process a (linear.x and linear.y)
-        is_a_continuous = self._is_continuous_servo(0, is_gripper_b=False)
-        if msg.linear.x > 0 and msg.linear.y <= 0:
-            direction = 1.0
-        elif msg.linear.y > 0 and msg.linear.x <= 0:
-            direction = -1.0
-        else:
-            direction = 0.0
-        self.gripper_values[0] = self._update_servo_value(
-            self.gripper_values[0], direction, self.a_pwm_step,
-            self.a_pwm_min, self.a_pwm_max, is_a_continuous
-        )
+        if not self.lock_ab_motion:
+            is_a_continuous = self._is_continuous_servo(0, is_gripper_b=False)
+            direction = self._get_axis_direction(msg.linear.x, msg.linear.y)
+            self.gripper_values[0] = self._update_servo_value(
+                self.gripper_values[0], direction, self.a_pwm_step,
+                self.a_pwm_min, self.a_pwm_max, is_a_continuous
+            )
             
         # Process b (linear.z and angular.z)
         is_b_continuous = self._is_continuous_servo(1, is_gripper_b=False)
-        if msg.linear.z > 0 and msg.angular.z <= 0:
-            direction = 1.0
-        elif msg.angular.z > 0 and msg.linear.z <= 0:
-            direction = -1.0
-        else:
-            direction = 0.0
+        direction = self._get_axis_direction(msg.linear.z, msg.angular.z)
         self.gripper_values[1] = self._update_servo_value(
             self.gripper_values[1], direction, self.b_pwm_step,
             self.b_pwm_min, self.b_pwm_max, is_b_continuous
         )
+        # Lock A to B motion ratio (B:1 -> A:lock_ab_ratio).
+        self._apply_ab_compensator(self.gripper_values, direction, is_gripper_b=False)
             
         # Process c (angular.x and angular.y)
         is_c_continuous = self._is_continuous_servo(2, is_gripper_b=False)
-        if msg.angular.x > 0 and msg.angular.y <= 0:
-            direction = 1.0
-        elif msg.angular.y > 0 and msg.angular.x <= 0:
-            direction = -1.0
-        else:
-            direction = 0.0
+        direction = self._get_axis_direction(msg.angular.x, msg.angular.y)
         self.gripper_values[2] = self._update_servo_value(
             self.gripper_values[2], direction, self.c_pwm_step,
             self.c_pwm_min, self.c_pwm_max, is_c_continuous
@@ -257,39 +275,27 @@ class command_decomposer(Node):
         
     def sec_gripper_listener_callback(self, msg: Twist):
         # Process a (linear.x and linear.y)
-        is_a_continuous = self._is_continuous_servo(0, is_gripper_b=True)
-        if msg.linear.x > 0 and msg.linear.y <= 0:
-            direction = 1.0
-        elif msg.linear.y > 0 and msg.linear.x <= 0:
-            direction = -1.0
-        else:
-            direction = 0.0
-        self.sec_gripper_values[0] = self._update_servo_value(
-            self.sec_gripper_values[0], direction, self.a_pwm_step,
-            self.a_pwm_min, self.a_pwm_max, is_a_continuous
-        )
+        if not self.lock_ab_motion:
+            is_a_continuous = self._is_continuous_servo(0, is_gripper_b=True)
+            direction = self._get_axis_direction(msg.linear.x, msg.linear.y)
+            self.sec_gripper_values[0] = self._update_servo_value(
+                self.sec_gripper_values[0], direction, self.a_pwm_step,
+                self.a_pwm_min, self.a_pwm_max, is_a_continuous
+            )
             
         # Process b (linear.z and angular.z)
         is_b_continuous = self._is_continuous_servo(1, is_gripper_b=True)
-        if msg.linear.z > 0 and msg.angular.z <= 0:
-            direction = 1.0
-        elif msg.angular.z > 0 and msg.linear.z <= 0:
-            direction = -1.0
-        else:
-            direction = 0.0
+        direction = self._get_axis_direction(msg.linear.z, msg.angular.z)
         self.sec_gripper_values[1] = self._update_servo_value(
             self.sec_gripper_values[1], direction, self.b_pwm_step,
             self.b_pwm_min, self.b_pwm_max, is_b_continuous
         )
+        # Lock A to B motion ratio (B:1 -> A:lock_ab_ratio).
+        self._apply_ab_compensator(self.sec_gripper_values, direction, is_gripper_b=True)
             
         # Process c (angular.x and angular.y)
         is_c_continuous = self._is_continuous_servo(2, is_gripper_b=True)
-        if msg.angular.x > 0 and msg.angular.y <= 0:
-            direction = 1.0
-        elif msg.angular.y > 0 and msg.angular.x <= 0:
-            direction = -1.0
-        else:
-            direction = 0.0
+        direction = self._get_axis_direction(msg.angular.x, msg.angular.y)
         self.sec_gripper_values[2] = self._update_servo_value(
             self.sec_gripper_values[2], direction, self.c_pwm_step,
             self.c_pwm_min, self.c_pwm_max, is_c_continuous
