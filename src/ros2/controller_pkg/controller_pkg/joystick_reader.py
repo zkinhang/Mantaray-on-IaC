@@ -310,14 +310,14 @@ class ConsoleCommand(Node):
                 full_movement_cmd[5] * self.power_limit.pitch          # dy -> pitch
             ]
 
-            # Set a threshold to zero out small values for linear.z and angular.z
+            # Set a threshold to zero out small values and reduce command jitter
             threshold = 0.15  # Define a threshold value
             movement_cmd_twist = Twist()
             movement_cmd_twist.linear.x      = movement_cmd[1] * -1   # left joystick y (forward/backward)
             movement_cmd_twist.linear.y      = movement_cmd[0] * -1 if abs(movement_cmd[0]) >= threshold else 0.0  # left joystick x (yaw)
             movement_cmd_twist.linear.z      = movement_cmd[3] * -1 if abs(movement_cmd[3]) >= threshold else 0.0  # right joystick y (up/down)
-            movement_cmd_twist.angular.x     = movement_cmd[4] * -1   # d-pad x (roll)
-            movement_cmd_twist.angular.y     = movement_cmd[5] * -1   # d-pad y (pitch)
+            movement_cmd_twist.angular.x     = movement_cmd[4] if abs(movement_cmd[4]) >= threshold else 0.0   # d-pad x (roll)
+            movement_cmd_twist.angular.y     = movement_cmd[5] * -1 if abs(movement_cmd[5]) >= threshold else 0.0   # d-pad y (pitch)
             movement_cmd_twist.angular.z     = movement_cmd[2] * -1   # right joystick x (left/right)
 
             self.movement_output = movement_cmd_twist
