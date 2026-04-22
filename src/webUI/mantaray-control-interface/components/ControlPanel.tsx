@@ -25,6 +25,8 @@ const AXES: { key: AxisKey; label: string }[] = [
 export const ControlPanel: React.FC = memo(() => {
   const { pidOn, togglePid, addLog, powerLimit, setPowerLimit, powerPresets, eulerAngles, isConnected } = useRos();
   const [selectedAxis, setSelectedAxis] = React.useState<AxisKey>('forward');
+  const yawZeroRef = React.useRef<number | null>(null);
+  const prevYawRef = React.useRef<number | null>(null);
 
   const selectAxis = (axis: AxisKey) => {
     setSelectedAxis(axis);
@@ -44,11 +46,37 @@ export const ControlPanel: React.FC = memo(() => {
 
   const selectedAxisLabel = AXES.find((a) => a.key === selectedAxis)?.label ?? selectedAxis;
   const formatAngle = (value: number) => `${value.toFixed(2)}°`;
+
+  React.useEffect(() => {
+    if (!isConnected) {
+      yawZeroRef.current = null;
+      prevYawRef.current = null;
+      return;
+    }
+
+    // Calibrate once per connection: first stable yaw sample becomes North (0 deg).
+    if (yawZeroRef.current === null) {
+      const currentYaw = eulerAngles.yaw;
+      if (prevYawRef.current === null) {
+        prevYawRef.current = currentYaw;
+        return;
+      }
+
+      if (Math.abs(currentYaw - prevYawRef.current) > 0.0001 || Math.abs(currentYaw) > 0.0001) {
+        yawZeroRef.current = currentYaw;
+      }
+
+      prevYawRef.current = currentYaw;
+    }
+  }, [isConnected, eulerAngles.yaw]);
+
+  const yawBaseline = yawZeroRef.current ?? 0;
+  const calibratedYaw = eulerAngles.yaw - yawBaseline;
   const normalizeYawDegrees = (value: number) => {
     const wrapped = ((value % 360) + 360) % 360;
     return wrapped;
   };
-  const yawDegrees = normalizeYawDegrees(eulerAngles.yaw);
+  const yawDegrees = normalizeYawDegrees(calibratedYaw);
   const yawRadians = (yawDegrees * Math.PI) / 180;
   const yawBallX = 50 + Math.cos(yawRadians - Math.PI / 2) * 30;
   const yawBallY = 50 + Math.sin(yawRadians - Math.PI / 2) * 30;
@@ -95,6 +123,9 @@ export const ControlPanel: React.FC = memo(() => {
                 <div className="flex items-center justify-between rounded border border-k3s-border bg-k3s-block/40 px-2 py-1.5">
                   <span className="text-[11px] text-k3s-muted uppercase">Yaw</span>
                   <span className="font-mono text-sm text-k3s-primary">{yawDegrees.toFixed(1)}°</span>
+                </div>
+                <div className="text-[10px] text-k3s-muted">
+                  Zero: <span className="font-mono">{formatAngle(yawBaseline)}</span>
                 </div>
               </div>
 
