@@ -1,6 +1,6 @@
 ﻿import React, { memo } from 'react';
 import { Activity, Power, ShieldAlert } from 'lucide-react';
-import { useRos } from '../context/RosContext';
+import { useRosApp, useRosTelemetry } from '../context/RosContext';
 
 interface PowerLimitMsg {
   forward: number;
@@ -23,7 +23,8 @@ const AXES: { key: AxisKey; label: string }[] = [
 ];
 
 export const ControlPanel: React.FC = memo(() => {
-  const { pidOn, togglePid, addLog, powerLimit, setPowerLimit, powerPresets, eulerAngles, depthRaw, depthCalculatedCm, calibrateDepthBaseline, isConnected } = useRos();
+  const { pidOn, togglePid, addLog, powerLimit, setPowerLimit, powerPresets, calibrateDepthBaseline, isConnected } = useRosApp();
+  const { eulerAngles, depthRaw, depthCalculatedCm } = useRosTelemetry();
   const [selectedAxis, setSelectedAxis] = React.useState<AxisKey>('forward');
   const yawZeroRef = React.useRef<number | null>(null);
   const prevYawRef = React.useRef<number | null>(null);
