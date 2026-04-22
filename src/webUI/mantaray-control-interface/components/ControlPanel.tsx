@@ -23,7 +23,7 @@ const AXES: { key: AxisKey; label: string }[] = [
 ];
 
 export const ControlPanel: React.FC = memo(() => {
-  const { pidOn, togglePid, addLog, powerLimit, setPowerLimit, powerPresets, eulerAngles, depthCalculatedCm, isConnected } = useRos();
+  const { pidOn, togglePid, addLog, powerLimit, setPowerLimit, powerPresets, eulerAngles, depthRaw, depthCalculatedCm, calibrateDepthBaseline, isConnected } = useRos();
   const [selectedAxis, setSelectedAxis] = React.useState<AxisKey>('forward');
   const yawZeroRef = React.useRef<number | null>(null);
   const prevYawRef = React.useRef<number | null>(null);
@@ -172,7 +172,21 @@ export const ControlPanel: React.FC = memo(() => {
             <div className="mt-1.5 flex items-center justify-between rounded border border-k3s-border bg-k3s-block/40 px-2 py-1.5">
               <span className="text-[11px] text-k3s-muted uppercase tracking-wider">Depth (cm)</span>
               <span className="font-mono text-sm text-k3s-primary font-bold">{depthCalculatedCm.toFixed(2)}</span>
-              </div>
+            </div>
+
+            <div className="mt-1 flex items-center justify-between text-[9px] text-k3s-muted">
+              <span className="font-mono">Raw={depthRaw.toFixed(2)}</span>
+              <button
+                onClick={calibrateDepthBaseline}
+                disabled={!isConnected}
+                className={`uppercase tracking-wider ${
+                  isConnected ? 'text-k3s-primary hover:underline' : 'opacity-60 cursor-not-allowed'
+                }`}
+                title="Set current depth sample as surface baseline"
+              >
+                set zero
+              </button>
+            </div>
           </div>
         </div>
 

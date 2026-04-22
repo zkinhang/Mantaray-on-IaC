@@ -49,10 +49,12 @@ interface RosContextType {
   eulerAngles: EulerAngles;
   depthRaw: number;
   depthCalculatedCm: number;
+  depthBaseline: number;
   powerPresets: PresetsRecord;
   updateTargetHost: (host: string) => void;
   addLog: (type: 'info' | 'warn' | 'error' | 'success', message: string) => void;
   togglePid: (status: boolean) => void;
+  calibrateDepthBaseline: () => void;
   setPowerLimit: (powerLimit: PowerLimitMsg) => void;
   updatePowerPresets: (presets: PresetsRecord) => void;
 }
@@ -76,6 +78,8 @@ const DEFAULT_PRESETS_RECORD: PresetsRecord = {
   yaw: [...DEFAULT_PRESET_ARRAY],
 };
 
+const DEFAULT_DEPTH_BASELINE = 20214;
+
 export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [targetHost, setTargetHost] = useState(rosService.getTargetHost());
@@ -96,7 +100,7 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     yaw: 0,
   });
   const [depthRaw, setDepthRaw] = useState(0);
-  const [depthCalculatedCm, setDepthCalculatedCm] = useState(0);
+  const [depthBaseline, setDepthBaseline] = useState<number>(DEFAULT_DEPTH_BASELINE);
   const [powerPresets, setPowerPresetsState] = useState<PresetsRecord>(() => {
     const stored = localStorage.getItem('power_presets');
     if (stored) {
@@ -145,12 +149,6 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const unsubDepth = rosService.subscribeDepth((receivedDepthRaw) => {
       setDepthRaw(receivedDepthRaw);
-      if (Number.isFinite(receivedDepthRaw)) {
-        const calculated = (receivedDepthRaw - 20214) / 16.8269;
-        setDepthCalculatedCm(calculated);
-      } else {
-        setDepthCalculatedCm(0);
-      }
     });
 
     return () => {
@@ -177,6 +175,16 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     rosService.publishPidToggle(status);
   };
 
+  const calibrateDepthBaseline = () => {
+    const nextBaseline = depthRaw;
+    if (!Number.isFinite(nextBaseline)) {
+      rosService.addLog('warn', 'Depth baseline calibration failed: invalid depth sample');
+      return;
+    }
+    setDepthBaseline(nextBaseline);
+    rosService.addLog('success', `Depth baseline calibrated at ${nextBaseline.toFixed(2)}`);
+  };
+
   const setPowerLimit = (newPowerLimit: PowerLimitMsg) => {
     setPowerLimitState(newPowerLimit);
     rosService.publishPowerLimit(newPowerLimit);
@@ -187,8 +195,12 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem('power_presets', JSON.stringify(newPresets));
   };
 
+  const depthCalculatedCm = Number.isFinite(depthRaw)
+    ? (depthRaw - depthBaseline) / 16.8269
+    : 0;
+
   return (
-    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, powerLimit, eulerAngles, depthRaw, depthCalculatedCm, powerPresets, updateTargetHost, addLog, togglePid, setPowerLimit, updatePowerPresets }}>
+    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, powerLimit, eulerAngles, depthRaw, depthCalculatedCm, depthBaseline, powerPresets, updateTargetHost, addLog, togglePid, calibrateDepthBaseline, setPowerLimit, updatePowerPresets }}>
       {children}
     </RosContext.Provider>
   );
