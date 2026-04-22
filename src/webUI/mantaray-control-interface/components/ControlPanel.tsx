@@ -13,8 +13,6 @@ interface PowerLimitMsg {
 
 type AxisKey = keyof PowerLimitMsg;
 
-type EulerAxisKey = 'roll' | 'pitch' | 'yaw';
-
 const AXES: { key: AxisKey; label: string }[] = [
   { key: 'forward', label: 'Forward' },
   { key: 'rightward', label: 'Rightward' },
@@ -22,12 +20,6 @@ const AXES: { key: AxisKey; label: string }[] = [
   { key: 'roll', label: 'Roll' },
   { key: 'pitch', label: 'Pitch' },
   { key: 'yaw', label: 'Yaw' },
-];
-
-const EULER_AXES: { key: EulerAxisKey; label: string; topic: string }[] = [
-  { key: 'roll', label: 'Roll', topic: '/system/roll' },
-  { key: 'pitch', label: 'Pitch', topic: '/system/pitch' },
-  { key: 'yaw', label: 'Yaw', topic: '/system/yaw' },
 ];
 
 export const ControlPanel: React.FC = memo(() => {
@@ -52,6 +44,14 @@ export const ControlPanel: React.FC = memo(() => {
 
   const selectedAxisLabel = AXES.find((a) => a.key === selectedAxis)?.label ?? selectedAxis;
   const formatAngle = (value: number) => `${value.toFixed(2)}°`;
+  const normalizeYawDegrees = (value: number) => {
+    const wrapped = ((value % 360) + 360) % 360;
+    return wrapped;
+  };
+  const yawDegrees = normalizeYawDegrees(eulerAngles.yaw);
+  const yawRadians = (yawDegrees * Math.PI) / 180;
+  const yawBallX = 50 + Math.cos(yawRadians - Math.PI / 2) * 30;
+  const yawBallY = 50 + Math.sin(yawRadians - Math.PI / 2) * 30;
 
   return (
     <div className="bg-k3s-block border-2 border-k3s-border p-4 flex flex-col h-full shadow-2xl min-h-0 overflow-hidden">
@@ -73,14 +73,39 @@ export const ControlPanel: React.FC = memo(() => {
             </span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
-            {EULER_AXES.map((axis) => (
-              <div key={axis.key} className="bg-k3s-dark border border-k3s-border rounded px-2 py-2">
-                <div className="text-[10px] text-k3s-muted uppercase tracking-wider">{axis.label}</div>
-                <div className="text-base font-mono font-bold text-k3s-primary mt-1">{formatAngle(eulerAngles[axis.key])}</div>
-                <div className="text-[9px] text-k3s-muted mt-1">{axis.topic}</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-k3s-dark border border-k3s-border rounded px-2 py-2">
+              <div className="text-[10px] text-k3s-muted uppercase tracking-wider">Roll</div>
+              <div className="text-base font-mono font-bold text-k3s-primary mt-1">{formatAngle(eulerAngles.roll)}</div>
+              <div className="text-[9px] text-k3s-muted mt-1">/system/roll</div>
+            </div>
+
+            <div className="bg-k3s-dark border border-k3s-border rounded px-2 py-2">
+              <div className="text-[10px] text-k3s-muted uppercase tracking-wider">Pitch</div>
+              <div className="text-base font-mono font-bold text-k3s-primary mt-1">{formatAngle(eulerAngles.pitch)}</div>
+              <div className="text-[9px] text-k3s-muted mt-1">/system/pitch</div>
+            </div>
+
+            <div className="col-span-2 bg-k3s-dark border border-k3s-border rounded px-2 py-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] text-k3s-muted uppercase tracking-wider">Yaw</div>
+                <div className="text-sm font-mono font-bold text-k3s-primary">{formatAngle(eulerAngles.yaw)}</div>
               </div>
-            ))}
+
+              <div className="mt-2 flex items-center justify-center">
+                <svg viewBox="0 0 100 100" className="w-24 h-24">
+                  <circle cx="50" cy="50" r="34" className="fill-transparent stroke-k3s-border" strokeWidth="2" />
+                  <circle cx="50" cy="16" r="2" className="fill-k3s-muted" />
+                  <line x1="50" y1="50" x2={yawBallX} y2={yawBallY} className="stroke-k3s-primary" strokeWidth="1.5" />
+                  <circle cx={yawBallX} cy={yawBallY} r="5" className="fill-k3s-primary" />
+                </svg>
+              </div>
+
+              <div className="flex items-center justify-between text-[9px] text-k3s-muted mt-1">
+                <span>/system/yaw</span>
+                <span>{yawDegrees.toFixed(1)}° normalized</span>
+              </div>
+            </div>
           </div>
         </div>
 
