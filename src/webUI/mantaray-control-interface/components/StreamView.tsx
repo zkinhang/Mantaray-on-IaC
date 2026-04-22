@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
 import { Camera, Download, RefreshCw, AlertCircle, Activity, Settings } from 'lucide-react';
-import { useRos } from '../context/RosContext';
+import { useRosApp } from '../context/RosContext';
 import { useWebRTC } from '../hooks/useWebRTC';
 
 interface StreamViewProps {
@@ -11,7 +11,7 @@ interface StreamViewProps {
 }
 
 export const StreamView: React.FC<StreamViewProps> = memo(({ id, title, url, onUrlChange }) => {
-  const { addLog } = useRos();
+  const { addLog } = useRosApp();
   const [isEditing, setIsEditing] = useState(false);
   const [tempUrl, setTempUrl] = useState(url);
   const videoRef = useRef<HTMLVideoElement>(null);
