@@ -1,6 +1,5 @@
 ﻿import React, { memo } from 'react';
 import { Activity, Power, ShieldAlert } from 'lucide-react';
-import { MovementControl } from './MovementControl';
 import { useRos } from '../context/RosContext';
 
 interface PowerLimitMsg {
@@ -14,12 +13,7 @@ interface PowerLimitMsg {
 
 type AxisKey = keyof PowerLimitMsg;
 
-const POWER_LEVELS: { label: string; value: number }[] = [
-  { label: 'LOW', value: 0.3 },
-  { label: 'MED', value: 0.5 },
-  { label: 'HIGH', value: 0.7 },
-  { label: 'MAX', value: 1.0 },
-];
+type EulerAxisKey = 'roll' | 'pitch' | 'yaw';
 
 const AXES: { key: AxisKey; label: string }[] = [
   { key: 'forward', label: 'Forward' },
@@ -30,8 +24,14 @@ const AXES: { key: AxisKey; label: string }[] = [
   { key: 'yaw', label: 'Yaw' },
 ];
 
+const EULER_AXES: { key: EulerAxisKey; label: string; topic: string }[] = [
+  { key: 'roll', label: 'Roll', topic: '/system/roll' },
+  { key: 'pitch', label: 'Pitch', topic: '/system/pitch' },
+  { key: 'yaw', label: 'Yaw', topic: '/system/yaw' },
+];
+
 export const ControlPanel: React.FC = memo(() => {
-  const { pidOn, togglePid, addLog, powerLimit, setPowerLimit, powerPresets } = useRos();
+  const { pidOn, togglePid, addLog, powerLimit, setPowerLimit, powerPresets, eulerAngles, isConnected } = useRos();
   const [selectedAxis, setSelectedAxis] = React.useState<AxisKey>('forward');
 
   const selectAxis = (axis: AxisKey) => {
@@ -51,6 +51,7 @@ export const ControlPanel: React.FC = memo(() => {
   };
 
   const selectedAxisLabel = AXES.find((a) => a.key === selectedAxis)?.label ?? selectedAxis;
+  const formatAngle = (value: number) => `${value.toFixed(2)}°`;
 
   return (
     <div className="bg-k3s-block border-2 border-k3s-border p-4 flex flex-col h-full shadow-2xl min-h-0 overflow-hidden">
@@ -60,8 +61,28 @@ export const ControlPanel: React.FC = memo(() => {
       </div>
 
       <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0">
-        {/* Movement Module */}
-        <MovementControl />
+        {/* Euler Angles */}
+        <div className="space-y-3 pb-4">
+          <div className="flex items-center justify-between gap-2 text-sm font-bold text-k3s-primary uppercase tracking-wider border-b border-k3s-border pb-2">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              <span>System Euler Angles</span>
+            </div>
+            <span className={`text-[10px] font-mono px-1.5 py-0.5 border ${isConnected ? 'text-green-300 border-green-500/60' : 'text-red-300 border-red-500/60'}`}>
+              {isConnected ? 'LIVE' : 'OFFLINE'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {EULER_AXES.map((axis) => (
+              <div key={axis.key} className="bg-k3s-dark border border-k3s-border rounded px-2 py-2">
+                <div className="text-[10px] text-k3s-muted uppercase tracking-wider">{axis.label}</div>
+                <div className="text-base font-mono font-bold text-k3s-primary mt-1">{formatAngle(eulerAngles[axis.key])}</div>
+                <div className="text-[9px] text-k3s-muted mt-1">{axis.topic}</div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Pilot Power Axes (6 equal buttons) */}
         <div className="space-y-3 pb-4">
