@@ -146,7 +146,7 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const unsubDepth = rosService.subscribeDepth((receivedDepthRaw) => {
       setDepthRaw(receivedDepthRaw);
       if (Number.isFinite(receivedDepthRaw)) {
-        const calculated = (receivedDepthRaw - 20250) / 16.8269;
+        const calculated = (receivedDepthRaw - 20214) / 16.8269;
         setDepthCalculatedCm(calculated);
       } else {
         setDepthCalculatedCm(0);
