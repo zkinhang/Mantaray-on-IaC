@@ -47,6 +47,8 @@ interface RosContextType {
   pidOn: boolean;
   powerLimit: PowerLimitMsg;
   eulerAngles: EulerAngles;
+  depthRaw: number;
+  depthCalculatedCm: number;
   powerPresets: PresetsRecord;
   updateTargetHost: (host: string) => void;
   addLog: (type: 'info' | 'warn' | 'error' | 'success', message: string) => void;
@@ -93,6 +95,8 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     pitch: 0,
     yaw: 0,
   });
+  const [depthRaw, setDepthRaw] = useState(0);
+  const [depthCalculatedCm, setDepthCalculatedCm] = useState(0);
   const [powerPresets, setPowerPresetsState] = useState<PresetsRecord>(() => {
     const stored = localStorage.getItem('power_presets');
     if (stored) {
@@ -139,12 +143,23 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setEulerAngles(receivedEuler);
     });
 
+    const unsubDepth = rosService.subscribeDepth((receivedDepthRaw) => {
+      setDepthRaw(receivedDepthRaw);
+      if (Number.isFinite(receivedDepthRaw)) {
+        const calculated = (receivedDepthRaw - 20250) / 16.8269;
+        setDepthCalculatedCm(calculated);
+      } else {
+        setDepthCalculatedCm(0);
+      }
+    });
+
     return () => {
       unsubStatus();
       unsubLogs();
       unsubPid();
       unsubPowerLimit();
       unsubEuler();
+      unsubDepth();
     };
   }, []);
 
@@ -173,7 +188,7 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   return (
-    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, powerLimit, eulerAngles, powerPresets, updateTargetHost, addLog, togglePid, setPowerLimit, updatePowerPresets }}>
+    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, powerLimit, eulerAngles, depthRaw, depthCalculatedCm, powerPresets, updateTargetHost, addLog, togglePid, setPowerLimit, updatePowerPresets }}>
       {children}
     </RosContext.Provider>
   );
