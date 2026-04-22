@@ -21,6 +21,12 @@ interface PowerPreset {
   value: number;
 }
 
+interface EulerAngles {
+  roll: number;
+  pitch: number;
+  yaw: number;
+}
+
 export type AxisKey = keyof PowerLimitMsg;
 
 export type PresetsRecord = {
@@ -40,6 +46,7 @@ interface RosContextType {
   logs: LogEntry[];
   pidOn: boolean;
   powerLimit: PowerLimitMsg;
+  eulerAngles: EulerAngles;
   powerPresets: PresetsRecord;
   updateTargetHost: (host: string) => void;
   addLog: (type: 'info' | 'warn' | 'error' | 'success', message: string) => void;
@@ -80,6 +87,11 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     roll: 0.5,
     pitch: 0.5,
     yaw: 0.5,
+  });
+  const [eulerAngles, setEulerAngles] = useState<EulerAngles>({
+    roll: 0,
+    pitch: 0,
+    yaw: 0,
   });
   const [powerPresets, setPowerPresetsState] = useState<PresetsRecord>(() => {
     const stored = localStorage.getItem('power_presets');
@@ -123,11 +135,16 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setPowerLimitState(receivedPowerLimit);
     });
 
+    const unsubEuler = rosService.subscribeEuler((receivedEuler) => {
+      setEulerAngles(receivedEuler);
+    });
+
     return () => {
       unsubStatus();
       unsubLogs();
       unsubPid();
       unsubPowerLimit();
+      unsubEuler();
     };
   }, []);
 
@@ -156,7 +173,7 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   return (
-    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, powerLimit, powerPresets, updateTargetHost, addLog, togglePid, setPowerLimit, updatePowerPresets }}>
+    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, powerLimit, eulerAngles, powerPresets, updateTargetHost, addLog, togglePid, setPowerLimit, updatePowerPresets }}>
       {children}
     </RosContext.Provider>
   );
