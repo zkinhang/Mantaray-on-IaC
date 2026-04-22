@@ -125,8 +125,23 @@ export const ControlPanel: React.FC = memo(() => {
                   <span className="text-[11px] text-k3s-muted uppercase">Yaw</span>
                   <span className="font-mono text-sm text-k3s-primary">{yawDegrees.toFixed(1)}°</span>
                 </div>
-                <div className="text-[10px] text-k3s-muted">
-                  Zero: <span className="font-mono">{formatAngle(yawBaseline)}</span>
+                <div className="flex items-center justify-between text-[10px] text-k3s-muted">
+                  <div>
+                    Zero: <span className="font-mono">{formatAngle(yawBaseline)}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      yawZeroRef.current = eulerAngles.yaw;
+                      addLog('info', `Yaw zero calibrated to ${formatAngle(eulerAngles.yaw)}`);
+                    }}
+                    disabled={!isConnected}
+                    className={`uppercase tracking-wider ${
+                      isConnected ? 'text-k3s-primary hover:underline' : 'opacity-60 cursor-not-allowed'
+                    }`}
+                    title="Set current yaw as North (0°)"
+                  >
+                    set zero
+                  </button>
                 </div>
               </div>
 
