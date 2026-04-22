@@ -52,6 +52,12 @@ export const ControlPanel: React.FC = memo(() => {
   const yawRadians = (yawDegrees * Math.PI) / 180;
   const yawBallX = 50 + Math.cos(yawRadians - Math.PI / 2) * 30;
   const yawBallY = 50 + Math.sin(yawRadians - Math.PI / 2) * 30;
+  const clampAngle = (value: number, limit = 45) => Math.max(-limit, Math.min(limit, value));
+  const rollForViz = clampAngle(eulerAngles.roll);
+  const pitchForViz = clampAngle(eulerAngles.pitch);
+  const tiltScale = 0.35;
+  const rollArrowX = 50 + rollForViz * tiltScale;
+  const pitchArrowY = 50 - pitchForViz * tiltScale;
 
   return (
     <div className="bg-k3s-block border-2 border-k3s-border p-4 flex flex-col h-full shadow-2xl min-h-0 overflow-hidden">
@@ -73,37 +79,62 @@ export const ControlPanel: React.FC = memo(() => {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-k3s-dark border border-k3s-border rounded px-2 py-2">
-              <div className="text-[10px] text-k3s-muted uppercase tracking-wider">Roll</div>
-              <div className="text-base font-mono font-bold text-k3s-primary mt-1">{formatAngle(eulerAngles.roll)}</div>
-              <div className="text-[9px] text-k3s-muted mt-1">/system/roll</div>
-            </div>
+          <div className="bg-k3s-dark border border-k3s-border rounded px-3 py-3">
+            <div className="text-[10px] text-k3s-muted uppercase tracking-wider mb-2">Euler Attitude</div>
 
-            <div className="bg-k3s-dark border border-k3s-border rounded px-2 py-2">
-              <div className="text-[10px] text-k3s-muted uppercase tracking-wider">Pitch</div>
-              <div className="text-base font-mono font-bold text-k3s-primary mt-1">{formatAngle(eulerAngles.pitch)}</div>
-              <div className="text-[9px] text-k3s-muted mt-1">/system/pitch</div>
-            </div>
-
-            <div className="col-span-2 bg-k3s-dark border border-k3s-border rounded px-2 py-2">
-              <div className="flex items-center justify-between">
-                <div className="text-[10px] text-k3s-muted uppercase tracking-wider">Yaw</div>
-                <div className="text-sm font-mono font-bold text-k3s-primary">{formatAngle(eulerAngles.yaw)}</div>
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-center">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded border border-k3s-border bg-k3s-block/40 px-2 py-1.5">
+                  <span className="text-[11px] text-k3s-muted uppercase">Roll</span>
+                  <span className="font-mono text-sm text-orange-300">{formatAngle(eulerAngles.roll)}</span>
+                </div>
+                <div className="flex items-center justify-between rounded border border-k3s-border bg-k3s-block/40 px-2 py-1.5">
+                  <span className="text-[11px] text-k3s-muted uppercase">Pitch</span>
+                  <span className="font-mono text-sm text-cyan-300">{formatAngle(eulerAngles.pitch)}</span>
+                </div>
+                <div className="flex items-center justify-between rounded border border-k3s-border bg-k3s-block/40 px-2 py-1.5">
+                  <span className="text-[11px] text-k3s-muted uppercase">Yaw</span>
+                  <span className="font-mono text-sm text-k3s-primary">{yawDegrees.toFixed(1)}°</span>
+                </div>
               </div>
 
-              <div className="mt-2 flex items-center justify-center">
-                <svg viewBox="0 0 100 100" className="w-24 h-24">
+              <div className="flex items-center justify-center">
+                <svg viewBox="0 0 100 100" className="w-44 h-44 md:w-52 md:h-52">
                   <circle cx="50" cy="50" r="34" className="fill-transparent stroke-k3s-border" strokeWidth="2" />
+                  <circle cx="50" cy="50" r="20" className="fill-transparent stroke-k3s-border" strokeWidth="1" strokeDasharray="2 2" />
                   <circle cx="50" cy="16" r="2" className="fill-k3s-muted" />
                   <line x1="50" y1="50" x2={yawBallX} y2={yawBallY} className="stroke-k3s-primary" strokeWidth="1.5" />
                   <circle cx={yawBallX} cy={yawBallY} r="5" className="fill-k3s-primary" />
-                </svg>
-              </div>
 
-              <div className="flex items-center justify-between text-[9px] text-k3s-muted mt-1">
-                <span>/system/yaw</span>
-                <span>{yawDegrees.toFixed(1)}° normalized</span>
+                  <line x1="34" y1="50" x2="66" y2="50" className="stroke-k3s-muted" strokeWidth="0.7" />
+                  <line x1="50" y1="34" x2="50" y2="66" className="stroke-k3s-muted" strokeWidth="0.7" />
+
+                  <line x1="50" y1="50" x2={rollArrowX} y2="50" className="stroke-orange-300" strokeWidth="1.8" />
+                  {rollArrowX >= 50 ? (
+                    <polygon
+                      points={`${rollArrowX},50 ${rollArrowX - 3},48 ${rollArrowX - 3},52`}
+                      className="fill-orange-300"
+                    />
+                  ) : (
+                    <polygon
+                      points={`${rollArrowX},50 ${rollArrowX + 3},48 ${rollArrowX + 3},52`}
+                      className="fill-orange-300"
+                    />
+                  )}
+
+                  <line x1="50" y1="50" x2="50" y2={pitchArrowY} className="stroke-cyan-300" strokeWidth="1.8" />
+                  {pitchArrowY <= 50 ? (
+                    <polygon
+                      points={`50,${pitchArrowY} 48,${pitchArrowY + 3} 52,${pitchArrowY + 3}`}
+                      className="fill-cyan-300"
+                    />
+                  ) : (
+                    <polygon
+                      points={`50,${pitchArrowY} 48,${pitchArrowY - 3} 52,${pitchArrowY - 3}`}
+                      className="fill-cyan-300"
+                    />
+                  )}
+                </svg>
               </div>
             </div>
           </div>
