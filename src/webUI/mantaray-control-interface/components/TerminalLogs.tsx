@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { useRos } from '../context/RosContext';
+import { useRosApp } from '../context/RosContext';
 
 export const TerminalLogs: React.FC = () => {
-  const { logs } = useRos();
+  const { logs } = useRosApp();
   const logEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll logs

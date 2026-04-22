@@ -1,6 +1,6 @@
 ﻿import React, { useState, useRef, memo } from 'react';
 import { Wifi, WifiOff, Server, ChevronDown, History, Menu, X, Bookmark, BookmarkCheck } from 'lucide-react';
-import { useRos } from '../context/RosContext';
+import { useRosApp } from '../context/RosContext';
 import { CountdownTimer } from './CountdownTimer';
 
 interface HeaderProps {
@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = memo(({ onMenuClick, onLogoClick, currentPage }) => {
-  const { isConnected, targetHost: activeHost, recentHosts, updateTargetHost } = useRos();
+  const { isConnected, targetHost: activeHost, recentHosts, updateTargetHost } = useRosApp();
   const [targetHost, setTargetHost] = useState(activeHost);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);

@@ -12,6 +12,8 @@ class RosService {
   private listeners: ((connected: boolean) => void)[] = [];
   private pidListeners: ((enabled: boolean) => void)[] = [];
   private powerLimitListeners: ((powerLimit: { forward: number; rightward: number; upward: number; roll: number; pitch: number; yaw: number }) => void)[] = [];
+  private eulerListeners: ((euler: { roll: number; pitch: number; yaw: number }) => void)[] = [];
+  private depthListeners: ((rawPressure: number) => void)[] = [];
   private logListeners: ((log: { type: 'info' | 'warn' | 'error' | 'success', message: string, timestamp: string }) => void)[] = [];
   
   // Topics
@@ -20,6 +22,17 @@ class RosService {
   private pidTogglePub: any = null;
   private powerLimitSub: any = null;
   private powerLimitPub: any = null;
+  private rollSub: any = null;
+  private pitchSub: any = null;
+  private yawSub: any = null;
+  private depthSub: any = null;
+
+  private currentEuler: { roll: number; pitch: number; yaw: number } = {
+    roll: 0,
+    pitch: 0,
+    yaw: 0,
+  };
+  private currentDepthRaw: number = 0;
 
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -177,6 +190,51 @@ class RosService {
           name: '/controller/power_limit',
           messageType: 'custom_interfaces/PowerLimit'
         });
+
+        // Setup Euler angle subscribers (std_msgs/Float64)
+        this.rollSub = new window.ROSLIB.Topic({
+          ros: this.ros,
+          name: '/system/roll',
+          messageType: 'std_msgs/Float64'
+        });
+
+        this.pitchSub = new window.ROSLIB.Topic({
+          ros: this.ros,
+          name: '/system/pitch',
+          messageType: 'std_msgs/Float64'
+        });
+
+        this.yawSub = new window.ROSLIB.Topic({
+          ros: this.ros,
+          name: '/system/yaw',
+          messageType: 'std_msgs/Float64'
+        });
+
+        this.depthSub = new window.ROSLIB.Topic({
+          ros: this.ros,
+          name: '/system/depth',
+          messageType: 'std_msgs/Float64'
+        });
+
+        this.rollSub.subscribe((message: { data: number }) => {
+          this.currentEuler = { ...this.currentEuler, roll: message.data };
+          this.notifyEulerListeners(this.currentEuler);
+        });
+
+        this.pitchSub.subscribe((message: { data: number }) => {
+          this.currentEuler = { ...this.currentEuler, pitch: message.data };
+          this.notifyEulerListeners(this.currentEuler);
+        });
+
+        this.yawSub.subscribe((message: { data: number }) => {
+          this.currentEuler = { ...this.currentEuler, yaw: message.data };
+          this.notifyEulerListeners(this.currentEuler);
+        });
+
+        this.depthSub.subscribe((message: { data: number }) => {
+          this.currentDepthRaw = message.data;
+          this.notifyDepthListeners(this.currentDepthRaw);
+        });
     } catch (err) {
         console.error("[ROS] Error setting up topics:", err);
     }
@@ -204,6 +262,22 @@ class RosService {
     };
   }
 
+  public subscribeEuler(callback: (euler: { roll: number; pitch: number; yaw: number }) => void) {
+    this.eulerListeners.push(callback);
+    callback(this.currentEuler);
+    return () => {
+      this.eulerListeners = this.eulerListeners.filter(l => l !== callback);
+    };
+  }
+
+  public subscribeDepth(callback: (rawPressure: number) => void) {
+    this.depthListeners.push(callback);
+    callback(this.currentDepthRaw);
+    return () => {
+      this.depthListeners = this.depthListeners.filter(l => l !== callback);
+    };
+  }
+
   private notifyStatusListeners() {
     this.listeners.forEach(l => l(this.isConnected));
   }
@@ -214,6 +288,14 @@ class RosService {
 
   private notifyPowerLimitListeners(powerLimit: { forward: number; rightward: number; upward: number; roll: number; pitch: number; yaw: number }) {
     this.powerLimitListeners.forEach(l => l(powerLimit));
+  }
+
+  private notifyEulerListeners(euler: { roll: number; pitch: number; yaw: number }) {
+    this.eulerListeners.forEach(l => l(euler));
+  }
+
+  private notifyDepthListeners(rawPressure: number) {
+    this.depthListeners.forEach(l => l(rawPressure));
   }
 
   public addLog(type: 'info' | 'warn' | 'error' | 'success', message: string) {

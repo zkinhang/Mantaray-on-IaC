@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import { rosService } from '../services/rosService';
 
 interface LogEntry {
@@ -21,6 +21,12 @@ interface PowerPreset {
   value: number;
 }
 
+interface EulerAngles {
+  roll: number;
+  pitch: number;
+  yaw: number;
+}
+
 export type AxisKey = keyof PowerLimitMsg;
 
 export type PresetsRecord = {
@@ -33,22 +39,31 @@ export type PresetsRecord = {
   yaw: PowerPreset[];
 };
 
-interface RosContextType {
+interface RosAppContextType {
   isConnected: boolean;
   targetHost: string;
   recentHosts: string[];
   logs: LogEntry[];
   pidOn: boolean;
   powerLimit: PowerLimitMsg;
+  depthBaseline: number;
   powerPresets: PresetsRecord;
   updateTargetHost: (host: string) => void;
   addLog: (type: 'info' | 'warn' | 'error' | 'success', message: string) => void;
   togglePid: (status: boolean) => void;
+  calibrateDepthBaseline: () => void;
   setPowerLimit: (powerLimit: PowerLimitMsg) => void;
   updatePowerPresets: (presets: PresetsRecord) => void;
 }
 
-const RosContext = createContext<RosContextType | undefined>(undefined);
+interface RosTelemetryContextType {
+  eulerAngles: EulerAngles;
+  depthRaw: number;
+  depthCalculatedCm: number;
+}
+
+const RosAppContext = createContext<RosAppContextType | undefined>(undefined);
+const RosTelemetryContext = createContext<RosTelemetryContextType | undefined>(undefined);
 
 const DEFAULT_PRESET_ARRAY: PowerPreset[] = [
   { label: 'LOW', value: 0.3 },
@@ -67,6 +82,8 @@ const DEFAULT_PRESETS_RECORD: PresetsRecord = {
   yaw: [...DEFAULT_PRESET_ARRAY],
 };
 
+const DEFAULT_DEPTH_BASELINE = 20214;
+
 export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [targetHost, setTargetHost] = useState(rosService.getTargetHost());
@@ -81,6 +98,13 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     pitch: 0.5,
     yaw: 0.5,
   });
+  const [eulerAngles, setEulerAngles] = useState<EulerAngles>({
+    roll: 0,
+    pitch: 0,
+    yaw: 0,
+  });
+  const [depthRaw, setDepthRaw] = useState(0);
+  const [depthBaseline, setDepthBaseline] = useState<number>(DEFAULT_DEPTH_BASELINE);
   const [powerPresets, setPowerPresetsState] = useState<PresetsRecord>(() => {
     const stored = localStorage.getItem('power_presets');
     if (stored) {
@@ -123,49 +147,133 @@ export const RosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setPowerLimitState(receivedPowerLimit);
     });
 
+    const unsubEuler = rosService.subscribeEuler((receivedEuler) => {
+      setEulerAngles(receivedEuler);
+    });
+
+    const unsubDepth = rosService.subscribeDepth((receivedDepthRaw) => {
+      setDepthRaw(receivedDepthRaw);
+    });
+
     return () => {
       unsubStatus();
       unsubLogs();
       unsubPid();
       unsubPowerLimit();
+      unsubEuler();
+      unsubDepth();
     };
   }, []);
 
-  const updateTargetHost = (host: string) => {
+  const updateTargetHost = useCallback((host: string) => {
     rosService.updateTargetHost(host);
     setTargetHost(rosService.getTargetHost());
     setRecentHosts(rosService.getRecentHosts());
-  };
+  }, []);
 
-  const addLog = (type: 'info' | 'warn' | 'error' | 'success', message: string) => {
+  const addLog = useCallback((type: 'info' | 'warn' | 'error' | 'success', message: string) => {
     rosService.addLog(type, message);
-  };
+  }, []);
 
-  const togglePid = (status: boolean) => {
+  const togglePid = useCallback((status: boolean) => {
     rosService.publishPidToggle(status);
-  };
+  }, []);
 
-  const setPowerLimit = (newPowerLimit: PowerLimitMsg) => {
+  const calibrateDepthBaseline = useCallback(() => {
+    const nextBaseline = depthRaw;
+    if (!Number.isFinite(nextBaseline)) {
+      rosService.addLog('warn', 'Depth baseline calibration failed: invalid depth sample');
+      return;
+    }
+    setDepthBaseline(nextBaseline);
+    rosService.addLog('success', `Depth baseline calibrated at ${nextBaseline.toFixed(2)}`);
+  }, [depthRaw]);
+
+  const setPowerLimit = useCallback((newPowerLimit: PowerLimitMsg) => {
     setPowerLimitState(newPowerLimit);
     rosService.publishPowerLimit(newPowerLimit);
-  };
+  }, []);
 
-  const updatePowerPresets = (newPresets: PresetsRecord) => {
+  const updatePowerPresets = useCallback((newPresets: PresetsRecord) => {
     setPowerPresetsState(newPresets);
     localStorage.setItem('power_presets', JSON.stringify(newPresets));
-  };
+  }, []);
+
+  const depthCalculatedCm = Number.isFinite(depthRaw)
+    ? (depthRaw - depthBaseline) / 16.8269
+    : 0;
+
+  const appValue = useMemo<RosAppContextType>(
+    () => ({
+      isConnected,
+      targetHost,
+      recentHosts,
+      logs,
+      pidOn,
+      powerLimit,
+      depthBaseline,
+      powerPresets,
+      updateTargetHost,
+      addLog,
+      togglePid,
+      calibrateDepthBaseline,
+      setPowerLimit,
+      updatePowerPresets,
+    }),
+    [
+      isConnected,
+      targetHost,
+      recentHosts,
+      logs,
+      pidOn,
+      powerLimit,
+      depthBaseline,
+      powerPresets,
+      updateTargetHost,
+      addLog,
+      togglePid,
+      calibrateDepthBaseline,
+      setPowerLimit,
+      updatePowerPresets,
+    ]
+  );
+
+  const telemetryValue = useMemo<RosTelemetryContextType>(
+    () => ({
+      eulerAngles,
+      depthRaw,
+      depthCalculatedCm,
+    }),
+    [eulerAngles, depthRaw, depthCalculatedCm]
+  );
 
   return (
-    <RosContext.Provider value={{ isConnected, targetHost, recentHosts, logs, pidOn, powerLimit, powerPresets, updateTargetHost, addLog, togglePid, setPowerLimit, updatePowerPresets }}>
-      {children}
-    </RosContext.Provider>
+    <RosAppContext.Provider value={appValue}>
+      <RosTelemetryContext.Provider value={telemetryValue}>
+        {children}
+      </RosTelemetryContext.Provider>
+    </RosAppContext.Provider>
   );
 };
 
-export const useRos = () => {
-  const context = useContext(RosContext);
+export const useRosApp = () => {
+  const context = useContext(RosAppContext);
   if (context === undefined) {
-    throw new Error('useRos must be used within a RosProvider');
+    throw new Error('useRosApp must be used within a RosProvider');
   }
   return context;
+};
+
+export const useRosTelemetry = () => {
+  const context = useContext(RosTelemetryContext);
+  if (context === undefined) {
+    throw new Error('useRosTelemetry must be used within a RosProvider');
+  }
+  return context;
+};
+
+export const useRos = () => {
+  const app = useRosApp();
+  const telemetry = useRosTelemetry();
+  return { ...app, ...telemetry };
 };

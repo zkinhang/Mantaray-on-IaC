@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useRos } from '../context/RosContext';
+import { useRosApp } from '../context/RosContext';
 
 // StatusIndicator Component - inline for consistency
 const StatusIndicator: React.FC<{ active: boolean; label?: string; size?: 'sm' | 'md'; showText?: boolean; className?: string }> = ({
@@ -52,7 +52,7 @@ const getSynchronizedValue = (limits: PowerLimitMsg): number | null => {
 };
 
 export const TelemetryPage: React.FC = () => {
-  const { powerLimit, setPowerLimit, addLog, powerPresets, updatePowerPresets } = useRos();
+  const { powerLimit, setPowerLimit, addLog, powerPresets, updatePowerPresets } = useRosApp();
 
   const [globalLevel, setGlobalLevel] = useState<number>(() => {
     const syncValue = getSynchronizedValue(powerLimit);
