@@ -35,6 +35,14 @@ export const ControlPanel: React.FC = memo(() => {
     addLog('info', `Pilot axis selected: ${label}`);
   };
 
+  // Check if we have valid telemetry data (not just connection)
+  const hasValidTelemetry = isConnected && (
+    Math.abs(eulerAngles.roll) > 0.01 || 
+    Math.abs(eulerAngles.pitch) > 0.01 || 
+    Math.abs(eulerAngles.yaw) > 0.01 || 
+    depthRaw > 0.1
+  );
+
   const setSelectedAxisPreset = (value: number) => {
     const label = AXES.find((a) => a.key === selectedAxis)?.label ?? selectedAxis;
     const next: PowerLimitMsg = {
@@ -103,8 +111,8 @@ export const ControlPanel: React.FC = memo(() => {
               <Activity className="w-4 h-4" />
               <span>System Euler Angles</span>
             </div>
-            <span className={`text-[10px] font-mono px-1.5 py-0.5 border ${isConnected ? 'text-green-300 border-green-500/60' : 'text-red-300 border-red-500/60'}`}>
-              {isConnected ? 'LIVE' : 'OFFLINE'}
+            <span className={`text-[10px] font-mono px-1.5 py-0.5 border ${hasValidTelemetry ? 'text-green-300 border-green-500/60' : 'text-red-300 border-red-500/60'}`}>
+              {hasValidTelemetry ? 'LIVE' : 'OFFLINE'}
             </span>
           </div>
 
@@ -125,8 +133,23 @@ export const ControlPanel: React.FC = memo(() => {
                   <span className="text-[11px] text-k3s-muted uppercase">Yaw</span>
                   <span className="font-mono text-sm text-k3s-primary">{yawDegrees.toFixed(1)}°</span>
                 </div>
-                <div className="text-[10px] text-k3s-muted">
-                  Zero: <span className="font-mono">{formatAngle(yawBaseline)}</span>
+                <div className="flex items-center justify-between text-[10px] text-k3s-muted">
+                  <div>
+                    Zero: <span className="font-mono">{formatAngle(yawBaseline)}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      yawZeroRef.current = eulerAngles.yaw;
+                      addLog('info', `Yaw zero calibrated to ${formatAngle(eulerAngles.yaw)}`);
+                    }}
+                    disabled={!hasValidTelemetry}
+                    className={`uppercase tracking-wider ${
+                      hasValidTelemetry ? 'text-k3s-primary hover:underline' : 'opacity-60 cursor-not-allowed'
+                    }`}
+                    title="Set current yaw as North (0°)"
+                  >
+                    set zero
+                  </button>
                 </div>
               </div>
 
@@ -179,9 +202,9 @@ export const ControlPanel: React.FC = memo(() => {
               <span className="font-mono">Raw={depthRaw.toFixed(2)}</span>
               <button
                 onClick={calibrateDepthBaseline}
-                disabled={!isConnected}
+                disabled={!hasValidTelemetry}
                 className={`uppercase tracking-wider ${
-                  isConnected ? 'text-k3s-primary hover:underline' : 'opacity-60 cursor-not-allowed'
+                  hasValidTelemetry ? 'text-k3s-primary hover:underline' : 'opacity-60 cursor-not-allowed'
                 }`}
                 title="Set current depth sample as surface baseline"
               >
