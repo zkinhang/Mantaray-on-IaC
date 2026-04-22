@@ -55,7 +55,7 @@ export const ControlPanel: React.FC = memo(() => {
   const clampAngle = (value: number, limit = 45) => Math.max(-limit, Math.min(limit, value));
   const rollForViz = clampAngle(eulerAngles.roll);
   const pitchForViz = clampAngle(eulerAngles.pitch);
-  const tiltScale = 0.35;
+  const tiltScale = 0.55;
   const rollArrowX = 50 + rollForViz * tiltScale;
   const pitchArrowY = 50 - pitchForViz * tiltScale;
 
@@ -101,7 +101,7 @@ export const ControlPanel: React.FC = memo(() => {
               <div className="flex items-center justify-center">
                 <svg viewBox="0 0 100 100" className="w-44 h-44 md:w-52 md:h-52">
                   <circle cx="50" cy="50" r="34" className="fill-transparent stroke-k3s-border" strokeWidth="2" />
-                  <circle cx="50" cy="50" r="20" className="fill-transparent stroke-k3s-border" strokeWidth="1" strokeDasharray="2 2" />
+                  <circle cx="50" cy="50" r="26" className="fill-transparent stroke-k3s-border" strokeWidth="1.6" strokeDasharray="3 2" />
                   <circle cx="50" cy="16" r="2" className="fill-k3s-muted" />
                   <line x1="50" y1="50" x2={yawBallX} y2={yawBallY} className="stroke-k3s-primary" strokeWidth="1.5" />
                   <circle cx={yawBallX} cy={yawBallY} r="5" className="fill-k3s-primary" />
@@ -109,29 +109,29 @@ export const ControlPanel: React.FC = memo(() => {
                   <line x1="34" y1="50" x2="66" y2="50" className="stroke-k3s-muted" strokeWidth="0.7" />
                   <line x1="50" y1="34" x2="50" y2="66" className="stroke-k3s-muted" strokeWidth="0.7" />
 
-                  <line x1="50" y1="50" x2={rollArrowX} y2="50" className="stroke-orange-300" strokeWidth="1.8" />
+                  <line x1="50" y1="50" x2={rollArrowX} y2="50" className="stroke-orange-200" strokeWidth="3.2" />
                   {rollArrowX >= 50 ? (
                     <polygon
-                      points={`${rollArrowX},50 ${rollArrowX - 3},48 ${rollArrowX - 3},52`}
-                      className="fill-orange-300"
+                      points={`${rollArrowX},50 ${rollArrowX - 5},46.5 ${rollArrowX - 5},53.5`}
+                      className="fill-orange-200"
                     />
                   ) : (
                     <polygon
-                      points={`${rollArrowX},50 ${rollArrowX + 3},48 ${rollArrowX + 3},52`}
-                      className="fill-orange-300"
+                      points={`${rollArrowX},50 ${rollArrowX + 5},46.5 ${rollArrowX + 5},53.5`}
+                      className="fill-orange-200"
                     />
                   )}
 
-                  <line x1="50" y1="50" x2="50" y2={pitchArrowY} className="stroke-cyan-300" strokeWidth="1.8" />
+                  <line x1="50" y1="50" x2="50" y2={pitchArrowY} className="stroke-cyan-200" strokeWidth="3.2" />
                   {pitchArrowY <= 50 ? (
                     <polygon
-                      points={`50,${pitchArrowY} 48,${pitchArrowY + 3} 52,${pitchArrowY + 3}`}
-                      className="fill-cyan-300"
+                      points={`50,${pitchArrowY} 46.5,${pitchArrowY + 5} 53.5,${pitchArrowY + 5}`}
+                      className="fill-cyan-200"
                     />
                   ) : (
                     <polygon
-                      points={`50,${pitchArrowY} 48,${pitchArrowY - 3} 52,${pitchArrowY - 3}`}
-                      className="fill-cyan-300"
+                      points={`50,${pitchArrowY} 46.5,${pitchArrowY - 5} 53.5,${pitchArrowY - 5}`}
+                      className="fill-cyan-200"
                     />
                   )}
                 </svg>
