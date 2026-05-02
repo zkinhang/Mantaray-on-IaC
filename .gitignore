@@ -43,3 +43,4 @@ __pycache__/
 
 **/dashboard-admin-token.txt
 *.cfg
+*.db
