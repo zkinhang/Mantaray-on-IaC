@@ -28,11 +28,18 @@ def save_parameters():
     if not data:
         return jsonify({'error': 'Invalid. No JSON data provided'}), 400
 
+    # Extract optional version name and the parameters payload
+    version_name = data.get('version_name')
+    parameters_payload = data.get('parameters', data) # Fallback if frontend sends raw config
+
     # Ensure format is correct when returning string
-    json_string = json.dumps(data, indent=4)
+    json_string = json.dumps(parameters_payload, indent=4)
 
     # 1. Save to SQLite for Diff/History functionality
-    new_param = RobotParameter(parameters_json=json_string)
+    new_param = RobotParameter(
+        parameters_json=json_string,
+        version_name=version_name
+    )
     db.session.add(new_param)
     db.session.commit()
 
