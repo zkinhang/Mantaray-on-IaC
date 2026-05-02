@@ -262,4 +262,5 @@ sudo chown "$USER":"$USER" ~/.kube/config
 - [ ] Compare the diff history with active one, not previous one
 - [ ] Allow "Star/Favorite" for the version history
 - [ ] No need "v1" "v2" display next to the name
+- [ ] Logic of deploy parameter to physical location
 - [ ] Integrate configurator to cluster
