@@ -514,7 +514,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
         <div className="flex items-center justify-between mb-6 border-b-2 border-k3s-border pb-4">
           <div className="flex items-center gap-2 text-k3s-primary font-bold uppercase tracking-widest text-sm">
             <History className="w-5 h-5" />
-            <span>Deployment History & Diff</span>
+            <span>Deployment History</span>
           </div>
         </div>
 
@@ -602,7 +602,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
             onClick={() => handleModeChange('thruster')} 
             className={`flex items-center gap-2 px-4 py-3 text-xs font-bold uppercase tracking-widest transition-colors whitespace-nowrap ${viewMode === 'thruster' ? 'bg-k3s-primary text-black' : 'bg-k3s-block text-k3s-muted hover:bg-k3s-border border border-k3s-border'}`}
           >
-            <LayoutList className="w-4 h-4 shrink-0" /> Thruster Profile
+            <LayoutList className="w-4 h-4 shrink-0" /> Thrusterboard
           </button>
           <button 
             onClick={() => handleModeChange('ahrs')} 
@@ -632,14 +632,13 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
             <Settings className="w-8 h-8 text-k3s-primary" />
             <div>
               <h1 className="text-3xl font-black text-white uppercase tracking-tighter">System Configuration</h1>
-              <p className="text-[10px] text-k3s-muted font-mono mt-1">Runtime Parameter Editing</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
               <input 
                 type="text" 
-                placeholder="Optional Version Name"
+                placeholder="(Optional) Version Name"
                 className="bg-black border border-k3s-border px-3 py-1.5 text-xs text-white focus:outline-none focus:border-k3s-primary w-48 mr-2 h-9"
                 value={versionName}
                 onChange={(e) => setVersionName(e.target.value)}
@@ -661,7 +660,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                className="flex items-center gap-2 bg-k3s-primary text-black hover:bg-white px-4 py-2 font-bold uppercase text-xs transition-colors disabled:opacity-60 disabled:cursor-not-allowed h-9"
             >
               {isSaving ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span>{isSaving ? 'Deploying...' : 'Deploy to vehicle'}</span>
+              <span>{isSaving ? 'Deploying...' : 'Deploy'}</span>
             </button>
           </div>
         </div>

@@ -19,7 +19,7 @@ export const SettingsPage: React.FC = () => {
             className={`flex items-center gap-2 px-6 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${activeTab === 'editor' ? 'bg-k3s-primary text-black' : 'bg-k3s-block border border-k3s-border text-k3s-muted hover:text-white'}`}
           >
             <Edit3 className="w-4 h-4" />
-            Configurator & GUI
+            Configurator
           </button>
           <button 
             onClick={() => setActiveTab('history')}
