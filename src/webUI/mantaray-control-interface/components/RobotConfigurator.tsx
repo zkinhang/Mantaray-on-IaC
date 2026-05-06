@@ -658,7 +658,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                           </button>
                           <button 
                             onClick={(e) => { e.stopPropagation(); submitToDeploy(record); }}
-                            className="text-[10px] font-bold text-k3s-secondary uppercase tracking-widest hover:text-white px-2 py-1 border border-k3s-secondary/30 hover:bg-k3s-secondary hover:text-black transition-colors"
+                            className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest bg-yellow-500/10 px-2 py-1 border border-yellow-500/30 hover:bg-yellow-500 hover:text-black transition-colors"
                           >
                             Deploy
                           </button>
