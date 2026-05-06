@@ -215,7 +215,9 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab,
     setIsSaving(true);
     setSaveError(null);
     try {
-      await saveParams(record.parameters, `Deployed from v${record.id}`, false);
+      const recordDate = new Date(record.createdAt).toLocaleString();
+      const displayName = record.versionName || `Update ${recordDate}`;
+      await saveParams(record.parameters, `Redeployed from ${displayName}`, false);
       await loadData();
     } catch (e: any) {
       setSaveError(e.message || 'Failed to deploy configuration');
