@@ -525,7 +525,10 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
         ) : (
           <div className="flex flex-col gap-4">
             {history.map((record, idx) => {
-              const previousRecord = idx < history.length - 1 ? history[idx + 1] : null;
+              const activeRecord = history[0];
+              // If we are looking at the active record, diff against the previous one (idx + 1)
+              // If we are looking at a history record, diff against the active one to show what changed
+              const diffBaseRecord = idx === 0 ? (idx < history.length - 1 ? history[idx + 1] : null) : activeRecord;
               const isExpanded = expandedDiffs[record.id];
               const date = new Date(record.createdAt).toLocaleString();
 
@@ -536,12 +539,9 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                     onClick={() => toggleExpand(record.id)}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="bg-k3s-primary/10 text-k3s-primary font-mono text-xs px-2 py-1 rounded">
-                        v{record.id}
-                      </div>
                       <div>
                         <div className="font-bold text-white text-sm">
-                          {record.versionName || 'Unnamed Update'}
+                          {record.versionName || `Update - ${date}`}
                         </div>
                         <div className="flex items-center gap-1 text-k3s-muted text-[10px] uppercase tracking-wider mt-1">
                           <Clock className="w-3 h-3" />
@@ -571,9 +571,9 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                   {isExpanded && (
                     <div className="p-4 border-t border-[#333]">
                       <div className="text-[10px] font-bold text-k3s-muted uppercase tracking-widest mb-3 flex items-center justify-between">
-                        <span>Changes from {previousRecord ? `v${previousRecord.id}` : 'initial state'}</span>
+                        <span>{idx === 0 ? (diffBaseRecord ? 'Changes from previous version' : 'Initial state') : 'Changes compared to Active Configuration'}</span>
                       </div>
-                      {renderDiff(previousRecord?.parameters, record.parameters)}
+                      {renderDiff(diffBaseRecord?.parameters, record.parameters)}
                     </div>
                   )}
                 </div>
@@ -626,8 +626,8 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
         </div>
       </div>
 
-      <div className="flex-1 w-full relative">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8 border-b-2 border-k3s-primary pb-4">
+      <div className="flex-1 w-full relative flex flex-col min-h-0">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8 border-b-2 border-k3s-primary pb-4 shrink-0">
           <div className="flex items-center gap-3">
             <Settings className="w-8 h-8 text-k3s-primary" />
             <div>
@@ -666,14 +666,14 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
         </div>
 
         {saveError && (
-          <div className="mb-4 bg-red-950/40 border border-red-500/50 p-3 text-red-400 text-xs flex items-center gap-2">
+          <div className="mb-4 bg-red-950/40 border border-red-500/50 p-3 text-red-400 text-xs flex items-center gap-2 shrink-0">
             <AlertTriangle className="w-4 h-4" />
             {saveError}
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-8">
-          <div className="bg-k3s-block border-2 border-k3s-border p-6 shadow-xl">
+        <div className="flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar">
+          <div className="bg-k3s-block border-2 border-k3s-border p-6 shadow-xl mb-8">
              {viewMode !== 'raw' ? renderForm() : (
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-k3s-muted uppercase tracking-widest block flex items-center justify-between">
