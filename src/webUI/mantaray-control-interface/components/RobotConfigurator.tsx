@@ -660,7 +660,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab,
                                     const changes = Diff.diffLines(oldStr, newStr);
                                     const added = changes.filter(p => p.added).length;
                                     const removed = changes.filter(p => p.removed).length;
-                                    const changedCount = added + removed;
+                                    const changedCount = added;
                                     if (changedCount === 0) return null;
                                     return (
                                       <span className="text-[9px] font-bold text-k3s-primary/80 bg-k3s-primary/5 px-1 border border-k3s-primary/20">{changedCount} changes</span>
