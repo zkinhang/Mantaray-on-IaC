@@ -1,11 +1,12 @@
 import os
+import argparse
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from models import db
 from routes import bp as parameters_bp
 import uuid
 
-def create_app():
+def create_app(params_path=None):
     app = Flask(__name__)
     
     # Configure SQLite Database and file path (relative to the folder on disk)
@@ -13,6 +14,9 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = db_path
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JSON_SORT_KEYS'] = False
+    
+    # Set the robot parameters file path
+    app.config['ROBOT_PARAMS_FILE_PATH'] = params_path or os.environ.get('ROBOT_PARAMS_FILE_PATH', 'robot_params.json')
 
     # Initialize Extensions
     db.init_app(app)
@@ -46,5 +50,9 @@ def create_app():
     return app
 
 if __name__ == '__main__':
-    app = create_app()
+    parser = argparse.ArgumentParser(description='Run the Parameter Configurator API')
+    parser.add_argument('--params-path', type=str, help='Path to robot_params.json', default='robot_params.json')
+    args = parser.parse_args()
+
+    app = create_app(params_path=args.params_path)
     app.run(host='0.0.0.0', port=5000)
