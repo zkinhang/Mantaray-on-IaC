@@ -611,7 +611,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                         <div className="font-bold text-white text-sm flex items-center gap-2">
                           {record.versionName || `Update - ${date}`}
                           {record.isDraft && (
-                             <span className="text-[9px] font-bold text-k3s-secondary uppercase tracking-widest bg-k3s-secondary/10 px-1.5 py-0.5 border border-k3s-secondary/30 rounded">
+                             <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest bg-blue-500/10 px-1.5 py-0.5 border border-blue-500/30 rounded">
                                Draft
                              </span>
                           )}
