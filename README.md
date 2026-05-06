@@ -260,7 +260,7 @@ sudo chown "$USER":"$USER" ~/.kube/config
 - [x] Save as draft function
 - [x] Default with timestamp, not "Unnamed Update"
 - [x] Compare the diff history with active one, not previous one
-- [ ] Allow "Star/Favorite" for the version history
+- [x] Allow "Star/Favorite" for the version history
 - [x] No need "v1" "v2" display next to the name
 - [ ] Logic of deploy parameter to physical location
 - [ ] Integrate configurator to cluster
