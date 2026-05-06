@@ -13,7 +13,7 @@ def create_app(params_path=None):
     db_path = os.getenv('DATABASE_URL', 'sqlite:///robot_configs.db')
     app.config['SQLALCHEMY_DATABASE_URI'] = db_path
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['JSON_SORT_KEYS'] = False
+    app.json.sort_keys = False
     
     # Set the robot parameters file path
     app.config['ROBOT_PARAMS_FILE_PATH'] = params_path or os.environ.get('ROBOT_PARAMS_FILE_PATH', 'robot_params.json')
