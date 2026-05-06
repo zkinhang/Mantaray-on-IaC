@@ -31,7 +31,7 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
+      <div className="flex-1 min-h-0 w-full">
         <RobotConfigurator activeTab={activeTab} />
       </div>
     </div>

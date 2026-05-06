@@ -510,21 +510,22 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
 
   if (activeTab === 'history') {
     return (
-      <div className="bg-k3s-block border-2 border-k3s-border p-6 shadow-xl mb-12">
-        <div className="flex items-center justify-between mb-6 border-b-2 border-k3s-border pb-4">
+      <div className="bg-k3s-block border-2 border-k3s-border p-6 shadow-xl h-full flex flex-col min-h-0">
+        <div className="flex items-center justify-between mb-6 border-b-2 border-k3s-border pb-4 shrink-0">
           <div className="flex items-center gap-2 text-k3s-primary font-bold uppercase tracking-widest text-sm">
             <History className="w-5 h-5" />
             <span>Deployment History</span>
           </div>
         </div>
 
-        {history.length === 0 ? (
-          <div className="text-center p-8 border border-dashed border-k3s-border text-k3s-muted text-xs uppercase tracking-widest">
-            No historical records found
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {history.map((record, idx) => {
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
+          {history.length === 0 ? (
+            <div className="text-center p-8 border border-dashed border-k3s-border text-k3s-muted text-xs uppercase tracking-widest">
+              No historical records found
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {history.map((record, idx) => {
               const activeRecord = history[0];
               // If we are looking at the active record, diff against the previous one (idx + 1)
               // If we are looking at a history record, diff against the active one to show what changed
@@ -579,15 +580,16 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                 </div>
               );
             })}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   // EXACT layout and wording matching the school project's Configurator Editor pane
   return (
-    <div className="flex flex-col xl:flex-row gap-8">
+    <div className="flex flex-col xl:flex-row gap-8 h-full min-h-0">
       {/* Sidebar-like view toggle exactly like school project */}
       <div className="flex flex-col gap-2 w-full xl:w-64 shrink-0">
         <h2 className="text-xl font-bold uppercase tracking-widest text-white mb-4 border-b-2 border-k3s-border pb-2">Config</h2>
