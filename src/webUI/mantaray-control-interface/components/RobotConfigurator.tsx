@@ -101,9 +101,10 @@ type ViewMode = 'pid' | 'thruster' | 'ahrs' | 'gripper' | 'raw';
 
 interface RobotConfiguratorProps {
   activeTab: 'editor' | 'history';
+  setActiveTab?: (tab: 'editor' | 'history') => void;
 }
 
-export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab }) => {
+export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab, setActiveTab }) => {
   const [params, setParams] = useState<any>(DEFAULT_PARAMS);
   const [viewMode, setViewMode] = useState<ViewMode>('pid');
   const [currentText, setCurrentText] = useState<string>('');
@@ -205,6 +206,9 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
     setParams(record.parameters);
     setCurrentText(JSON.stringify(record.parameters, null, 4));
     setVersionName(`${record.versionName || 'Restore'} (Editing)`);
+    if (setActiveTab) {
+      setActiveTab('editor');
+    }
   };
 
   const submitToDeploy = async (record: RobotParameterDTO) => {

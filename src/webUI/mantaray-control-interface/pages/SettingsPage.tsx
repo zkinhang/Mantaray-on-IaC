@@ -32,7 +32,7 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       <div className="flex-1 min-h-0 w-full">
-        <RobotConfigurator activeTab={activeTab} />
+        <RobotConfigurator activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
     </div>
   );
