@@ -8,6 +8,7 @@ export interface RobotParameterDTO {
   parameters: any;
   createdAt: string;
   isDraft: boolean;
+  isStarred: boolean;
 }
 
 export const fetchLatestParams = async (): Promise<RobotParameterDTO | null> => {
@@ -59,4 +60,21 @@ export const saveParams = async (
 
   const result = await response.json();
   return result.data;
+};
+
+export const toggleStarParam = async (id: number, isStarred: boolean): Promise<RobotParameterDTO> => {
+  const response = await fetch(`${API_BASE_URL}/${id}/star`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ is_starred: isStarred }),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.error || 'Failed to toggle star');
+  }
+
+  return await response.json();
 };

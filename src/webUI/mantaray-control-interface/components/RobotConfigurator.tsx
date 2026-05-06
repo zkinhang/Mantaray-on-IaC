@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { fetchLatestParams, fetchParamHistory, saveParams, RobotParameterDTO } from '../services/api';
-import { Settings, Save, AlertTriangle, History, Clock, FileJson, ChevronDown, ChevronUp, RotateCcw, LayoutList, Gamepad2, Compass, Wrench, Edit3, FileText } from 'lucide-react';
+import { fetchLatestParams, fetchParamHistory, saveParams, toggleStarParam, RobotParameterDTO } from '../services/api';
+import { Settings, Save, AlertTriangle, History, Clock, FileJson, ChevronDown, ChevronUp, RotateCcw, LayoutList, Gamepad2, Compass, Wrench, Edit3, FileText, Star } from 'lucide-react';
 import * as Diff from 'diff';
 
 const DEFAULT_PARAMS = {
@@ -579,6 +579,16 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab,
     setExpandedBlocks(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleStarToggle = async (e: React.MouseEvent, record: RobotParameterDTO) => {
+    e.stopPropagation();
+    try {
+      await toggleStarParam(record.id, !record.isStarred);
+      await loadData();
+    } catch (e: any) {
+      setSaveError(e.message || 'Failed to toggle star');
+    }
+  };
+
   if (activeTab === 'history') {
     return (
       <div className="bg-k3s-block border-2 border-k3s-border p-6 shadow-xl h-full flex flex-col min-h-0">
@@ -613,6 +623,12 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab,
                     onClick={() => toggleExpand(record.id)}
                   >
                     <div className="flex items-center gap-4">
+                      <button 
+                        onClick={(e) => handleStarToggle(e, record)}
+                        className={`transition-colors flex-shrink-0 ${record.isStarred ? 'text-yellow-400' : 'text-k3s-muted hover:text-white'}`}
+                      >
+                        <Star className={`w-5 h-5 ${record.isStarred ? 'fill-current' : ''}`} />
+                      </button>
                       <div>
                         <div className="font-bold text-white text-sm flex items-center gap-2">
                           {record.versionName || `Update - ${date}`}

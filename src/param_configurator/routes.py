@@ -25,6 +25,28 @@ def get_parameter_history():
     params = RobotParameter.query.order_by(RobotParameter.created_at.desc()).all()
     return jsonify([p.to_dict() for p in params]), 200
 
+@bp.route('/<int:param_id>/star', methods=['PATCH'])
+def toggle_star(param_id):
+    param = RobotParameter.query.get_or_404(param_id)
+    data = request.get_json(silent=True) or {}
+    
+    # 1. Provide Explicit User Input Validation
+    if 'is_starred' in data:
+        if not isinstance(data['is_starred'], bool):
+            return jsonify({'error': 'is_starred must be a boolean value'}), 400
+        param.is_starred = data['is_starred']
+    else:
+        param.is_starred = not param.is_starred
+        
+    # 2. Error Handle Database Transactions properly
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Database transaction failed: {str(e)}'}), 500
+        
+    return jsonify(param.to_dict()), 200
+
 @bp.route('', methods=['POST'])
 def save_parameters():
     data = request.get_json()

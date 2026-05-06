@@ -12,6 +12,7 @@ class RobotParameter(db.Model):
     parameters_json = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     is_draft = db.Column(db.Boolean, default=False, nullable=False)
+    is_starred = db.Column(db.Boolean, default=False, nullable=False)
 
     def to_dict(self):
         return {
@@ -19,5 +20,6 @@ class RobotParameter(db.Model):
             'versionName': self.version_name,
             'parameters': json.loads(self.parameters_json),
             'createdAt': self.created_at.isoformat(),
-            'isDraft': self.is_draft
+            'isDraft': self.is_draft,
+            'isStarred': self.is_starred
         }
