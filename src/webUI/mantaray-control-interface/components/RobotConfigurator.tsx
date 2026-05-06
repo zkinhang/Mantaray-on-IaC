@@ -493,12 +493,33 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
     const oldStr = oldObj ? JSON.stringify(oldObj, null, 2) : '';
     const newStr = newObj ? JSON.stringify(newObj, null, 2) : '';
     const changes = Diff.diffLines(oldStr, newStr);
+
+    // Filter out context lines to show only changes
+    const diffLines = changes.flatMap((part) => {
+      const lines = part.value.split('\n').filter(l => l.length > 0);
+      return lines.map(line => ({
+        content: line,
+        added: part.added,
+        removed: part.removed
+      }));
+    });
+
+    const onlyChanges = diffLines.filter(line => line.added || line.removed);
+
+    if (onlyChanges.length === 0) {
+      return (
+        <div className="text-center py-4 border border-dashed border-k3s-border bg-black/20 text-k3s-muted text-[10px] uppercase tracking-widest">
+          No differences found
+        </div>
+      );
+    }
+
     return (
       <div className="font-mono text-xs whitespace-pre overflow-x-auto bg-black p-4 rounded text-gray-300 border border-[#333]">
-        {changes.map((part, index) => {
-          if (part.added) return <div key={index} className="bg-green-900/40 text-green-400">+{part.value.replace(/\n$/, '')}</div>;
-          if (part.removed) return <div key={index} className="bg-red-900/40 text-red-400">-{part.value.replace(/\n$/, '')}</div>;
-          return <div key={index} className="opacity-50"> {part.value.replace(/\n$/, '')}</div>;
+        {onlyChanges.map((line, index) => {
+          if (line.added) return <div key={index} className="bg-green-900/40 text-green-400">+{line.content}</div>;
+          if (line.removed) return <div key={index} className="bg-red-900/40 text-red-400">-{line.content}</div>;
+          return null;
         })}
       </div>
     );
@@ -544,9 +565,30 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                         <div className="font-bold text-white text-sm">
                           {record.versionName || `Update - ${date}`}
                         </div>
-                        <div className="flex items-center gap-1 text-k3s-muted text-[10px] uppercase tracking-wider mt-1">
-                          <Clock className="w-3 h-3" />
-                          {date}
+                        <div className="flex flex-col gap-1 mt-1">
+                          <div className="flex items-center gap-1 text-k3s-muted text-[10px] uppercase tracking-wider">
+                            <Clock className="w-3 h-3" />
+                            {date}
+                          </div>
+                          {idx !== 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {(() => {
+                                const activeRecord = history[0];
+                                const oldStr = activeRecord ? JSON.stringify(activeRecord.parameters, null, 2) : '';
+                                const newStr = JSON.stringify(record.parameters, null, 2);
+                                const changes = Diff.diffLines(oldStr, newStr);
+                                const added = changes.filter(p => p.added).length;
+                                const removed = changes.filter(p => p.removed).length;
+                                if (added === 0 && removed === 0) return null;
+                                return (
+                                  <>
+                                    <span className="text-[9px] font-bold text-green-500/80 bg-green-500/5 px-1 border border-green-500/20">+{added} lines</span>
+                                    <span className="text-[9px] font-bold text-red-500/80 bg-red-500/5 px-1 border border-red-500/20">-{removed} lines</span>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
