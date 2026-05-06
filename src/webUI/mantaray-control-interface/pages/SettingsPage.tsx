@@ -10,7 +10,7 @@ export const SettingsPage: React.FC = () => {
       <div className="flex items-center justify-between border-b-2 border-k3s-primary pb-4">
         <div className="flex items-center gap-3">
           <Settings className="w-8 h-8 text-k3s-primary" />
-          <h1 className="text-3xl font-black text-white uppercase tracking-tighter">System Configuration</h1>
+          <h1 className="text-3xl font-black text-white uppercase tracking-tighter">System Settings</h1>
         </div>
         
         <div className="flex gap-2">

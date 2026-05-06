@@ -527,9 +527,9 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
             <div className="flex flex-col gap-4">
               {history.map((record, idx) => {
               const activeRecord = history[0];
-              // If we are looking at the active record, diff against the previous one (idx + 1)
+              // If we are looking at the active record, diff against itself (showing no diff)
               // If we are looking at a history record, diff against the active one to show what changed
-              const diffBaseRecord = idx === 0 ? (idx < history.length - 1 ? history[idx + 1] : null) : activeRecord;
+              const diffBaseRecord = idx === 0 ? activeRecord : activeRecord;
               const isExpanded = expandedDiffs[record.id];
               const date = new Date(record.createdAt).toLocaleString();
 
@@ -572,9 +572,15 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                   {isExpanded && (
                     <div className="p-4 border-t border-[#333]">
                       <div className="text-[10px] font-bold text-k3s-muted uppercase tracking-widest mb-3 flex items-center justify-between">
-                        <span>{idx === 0 ? (diffBaseRecord ? 'Changes from previous version' : 'Initial state') : 'Changes compared to Active Configuration'}</span>
+                        <span>{idx === 0 ? 'Active Configuration' : 'Changes compared to Active Configuration'}</span>
                       </div>
-                      {renderDiff(diffBaseRecord?.parameters, record.parameters)}
+                      {idx === 0 ? (
+                        <div className="text-center py-4 border border-dashed border-k3s-border bg-black/20 text-k3s-muted text-[10px] uppercase tracking-widest">
+                          This is the currently deployed configuration
+                        </div>
+                      ) : (
+                        renderDiff(diffBaseRecord?.parameters, record.parameters)
+                      )}
                     </div>
                   )}
                 </div>
@@ -633,7 +639,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
           <div className="flex items-center gap-3">
             <Settings className="w-8 h-8 text-k3s-primary" />
             <div>
-              <h1 className="text-3xl font-black text-white uppercase tracking-tighter">System Configuration</h1>
+              <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Robot Parameters</h1>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
