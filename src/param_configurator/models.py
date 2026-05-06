@@ -11,11 +11,13 @@ class RobotParameter(db.Model):
     version_name = db.Column(db.String(100), nullable=True)
     parameters_json = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    is_draft = db.Column(db.Boolean, default=False, nullable=False)
 
     def to_dict(self):
         return {
             'id': self.id,
             'versionName': self.version_name,
             'parameters': json.loads(self.parameters_json),
-            'createdAt': self.created_at.isoformat()
+            'createdAt': self.created_at.isoformat(),
+            'isDraft': self.is_draft
         }

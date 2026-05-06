@@ -7,6 +7,7 @@ export interface RobotParameterDTO {
   versionName: string | null;
   parameters: any;
   createdAt: string;
+  isDraft: boolean;
 }
 
 export const fetchLatestParams = async (): Promise<RobotParameterDTO | null> => {
@@ -34,10 +35,12 @@ export const fetchParamHistory = async (): Promise<RobotParameterDTO[]> => {
 
 export const saveParams = async (
   parameters: any,
-  versionName?: string
+  versionName?: string,
+  isDraft: boolean = false
 ): Promise<RobotParameterDTO> => {
   const payload = {
     version_name: versionName,
+    is_draft: isDraft,
     parameters: parameters,
   };
 

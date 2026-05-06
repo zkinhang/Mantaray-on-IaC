@@ -182,7 +182,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (isDraft: boolean = false) => {
     if (viewMode === 'raw' && parseError) return;
     
     setIsSaving(true);
@@ -190,7 +190,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
     
     try {
       const parsedJson = viewMode === 'raw' ? JSON.parse(currentText) : params;
-      await saveParams(parsedJson, versionName.trim() || undefined);
+      await saveParams(parsedJson, versionName.trim() || undefined, isDraft);
       
       setVersionName('');
       await loadData();
@@ -201,10 +201,23 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
     }
   };
 
-  const restoreVersion = (record: RobotParameterDTO) => {
+  const resumeEditing = (record: RobotParameterDTO) => {
     setParams(record.parameters);
     setCurrentText(JSON.stringify(record.parameters, null, 4));
-    setVersionName(`Restored from v${record.id}`);
+    setVersionName(`${record.versionName || 'Restore'} (Editing)`);
+  };
+
+  const submitToDeploy = async (record: RobotParameterDTO) => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await saveParams(record.parameters, `Deployed from v${record.id}`, false);
+      await loadData();
+    } catch (e: any) {
+      setSaveError(e.message || 'Failed to deploy configuration');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const renderPidBlock = (axis: string) => {
@@ -578,23 +591,30 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
           ) : (
             <div className="flex flex-col gap-4">
               {history.map((record, idx) => {
-              const activeRecord = history[0];
-              // If we are looking at the active record, diff against itself (showing no diff)
-              // If we are looking at a history record, diff against the active one to show what changed
-              const diffBaseRecord = idx === 0 ? activeRecord : activeRecord;
+              // The "Active" record is technically the first non-draft record
+              const activeRecord = history.find(r => !r.isDraft) || history[0];
+              const diffBaseRecord = activeRecord;
               const isExpanded = expandedDiffs[record.id];
               const date = new Date(record.createdAt).toLocaleString();
+              
+              // We consider a record "Active" visually if it is the first non-draft record
+              const isActive = activeRecord && record.id === activeRecord.id;
 
               return (
-                <div key={record.id} className="border border-k3s-border bg-black/40 overflow-hidden">
+                <div key={record.id} className={`border ${record.isDraft ? 'border-k3s-secondary/50 border-dashed' : 'border-k3s-border'} bg-black/40 overflow-hidden`}>
                   <div 
                     className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#111] transition-colors"
                     onClick={() => toggleExpand(record.id)}
                   >
                     <div className="flex items-center gap-4">
                       <div>
-                        <div className="font-bold text-white text-sm">
+                        <div className="font-bold text-white text-sm flex items-center gap-2">
                           {record.versionName || `Update - ${date}`}
+                          {record.isDraft && (
+                             <span className="text-[9px] font-bold text-k3s-secondary uppercase tracking-widest bg-k3s-secondary/10 px-1.5 py-0.5 border border-k3s-secondary/30 rounded">
+                               Draft
+                             </span>
+                          )}
                         </div>
                         <div className="flex flex-col gap-1 mt-1">
                           <div className="flex items-center gap-1 text-k3s-muted text-[10px] uppercase tracking-wider">
@@ -623,18 +643,26 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                     </div>
                     
                     <div className="flex items-center gap-4">
-                      {idx === 0 && (
+                      {isActive && (
                         <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest bg-green-500/10 px-2 py-1 border border-green-500/30">
                           Active
                         </span>
                       )}
-                      {idx !== 0 && (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); restoreVersion(record); }}
-                          className="text-[10px] font-bold text-k3s-secondary uppercase tracking-widest hover:text-white px-2 py-1 border border-k3s-secondary/30 transition-colors"
-                        >
-                          Restore
-                        </button>
+                      {!isActive && (
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); resumeEditing(record); }}
+                            className="text-[10px] font-bold text-k3s-muted uppercase tracking-widest hover:text-white px-2 py-1 border border-k3s-border hover:border-k3s-muted transition-colors"
+                          >
+                            Resume Edit
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); submitToDeploy(record); }}
+                            className="text-[10px] font-bold text-k3s-secondary uppercase tracking-widest hover:text-white px-2 py-1 border border-k3s-secondary/30 hover:bg-k3s-secondary hover:text-black transition-colors"
+                          >
+                            Deploy
+                          </button>
+                        </div>
                       )}
                       {isExpanded ? <ChevronUp className="w-5 h-5 text-k3s-muted" /> : <ChevronDown className="w-5 h-5 text-k3s-muted" />}
                     </div>
@@ -643,9 +671,9 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                   {isExpanded && (
                     <div className="p-4 border-t border-[#333]">
                       <div className="text-[10px] font-bold text-k3s-muted uppercase tracking-widest mb-3 flex items-center justify-between">
-                        <span>{idx === 0 ? 'Active Configuration' : 'Changes compared to Active Configuration'}</span>
+                        <span>{isActive ? 'Active Configuration' : 'Changes compared to Active Configuration'}</span>
                       </div>
-                      {idx === 0 ? (
+                      {isActive ? (
                         <div className="text-center py-4 border border-dashed border-k3s-border bg-black/20 text-k3s-muted text-[10px] uppercase tracking-widest">
                           This is the currently deployed configuration
                         </div>
@@ -726,15 +754,16 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
             
             <button
                type="button"
-               disabled
-               className="flex items-center gap-2 bg-k3s-block border border-k3s-border text-k3s-primary px-4 py-2 font-bold uppercase text-xs transition-colors opacity-60 cursor-not-allowed h-9"
+               onClick={() => handleSave(true)}
+               disabled={(viewMode === 'raw' && !!parseError) || isSaving}
+               className="flex items-center gap-2 bg-k3s-block border border-k3s-border text-k3s-primary hover:bg-k3s-primary/10 px-4 py-2 font-bold uppercase text-xs transition-colors disabled:opacity-60 disabled:cursor-not-allowed h-9"
             >
               <FileText className="w-4 h-4" />
-              <span>Save as draft</span>
+              <span>{isSaving ? 'Saving...' : 'Save as draft'}</span>
             </button>
             <button
                type="button"
-               onClick={handleSave}
+               onClick={() => handleSave(false)}
                disabled={(viewMode === 'raw' && !!parseError) || isSaving}
                className="flex items-center gap-2 bg-k3s-primary text-black hover:bg-white px-4 py-2 font-bold uppercase text-xs transition-colors disabled:opacity-60 disabled:cursor-not-allowed h-9"
             >

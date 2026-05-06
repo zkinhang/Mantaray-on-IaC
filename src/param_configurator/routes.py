@@ -9,8 +9,11 @@ ROBOT_PARAMS_FILE_PATH = os.environ.get('ROBOT_PARAMS_FILE_PATH', 'robot_params.
 
 @bp.route('', methods=['GET'])
 def get_latest_parameters():
-    # Fetch the most recent parameter layout
-    latest_params = RobotParameter.query.order_by(RobotParameter.created_at.desc()).first()
+    # Fetch the most recent deployed parameter layout
+    latest_params = RobotParameter.query.filter_by(is_draft=False).order_by(RobotParameter.created_at.desc()).first()
+    if not latest_params:
+        # Fallback to any latest if no deployed found
+        latest_params = RobotParameter.query.order_by(RobotParameter.created_at.desc()).first()
     if not latest_params:
         return jsonify({'message': 'No parameters found'}), 404
         
@@ -30,6 +33,7 @@ def save_parameters():
 
     # Extract optional version name and the parameters payload
     version_name = data.get('version_name')
+    is_draft = data.get('is_draft', False)
     parameters_payload = data.get('parameters', data) # Fallback if frontend sends raw config
 
     # Ensure format is correct when returning string
@@ -38,19 +42,21 @@ def save_parameters():
     # 1. Save to SQLite for Diff/History functionality
     new_param = RobotParameter(
         parameters_json=json_string,
-        version_name=version_name
+        version_name=version_name,
+        is_draft=is_draft
     )
     db.session.add(new_param)
     db.session.commit()
 
-    # 2. Write to the physical JSON file for ROS2/Ansible integration
-    try:
-        with open(ROBOT_PARAMS_FILE_PATH, 'w', encoding='utf-8') as f:
-            f.write(json_string)
-    except IOError as e:
-        return jsonify({'error': f'Failed to write robot_params.json: {str(e)}'}), 500
+    # 2. Write to the physical JSON file ONLY if it's not a draft
+    if not is_draft:
+        try:
+            with open(ROBOT_PARAMS_FILE_PATH, 'w', encoding='utf-8') as f:
+                f.write(json_string)
+        except IOError as e:
+            return jsonify({'error': f'Failed to write robot_params.json: {str(e)}'}), 500
 
     return jsonify({
-        'message': 'Parameters saved and deployed successfully',
+        'message': 'Saved as draft successfully' if is_draft else 'Parameters saved and deployed successfully',
         'data': new_param.to_dict()
     }), 201
