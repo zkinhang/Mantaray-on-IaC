@@ -256,11 +256,11 @@ sudo chown "$USER":"$USER" ~/.kube/config
 - [ ] CI/CD pipeline for uploading images to local registry
 - [x] Integrate webRTC to cluster
 - [x] Integrate webUI to cluster
-- [ ] Enable scolling for too long components in configurator
-- [ ] Save as draft function
-- [ ] Default with timestamp, not "Unnamed Update"
-- [ ] Compare the diff history with active one, not previous one
+- [x] Enable scolling for too long components in configurator
+- [x] Save as draft function
+- [x] Default with timestamp, not "Unnamed Update"
+- [x] Compare the diff history with active one, not previous one
 - [ ] Allow "Star/Favorite" for the version history
-- [ ] No need "v1" "v2" display next to the name
+- [x] No need "v1" "v2" display next to the name
 - [ ] Logic of deploy parameter to physical location
 - [ ] Integrate configurator to cluster
