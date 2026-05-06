@@ -111,6 +111,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
   const [versionName, setVersionName] = useState<string>('');
   const [history, setHistory] = useState<RobotParameterDTO[]>([]);
   const [expandedDiffs, setExpandedBlocks] = useState<Record<number, boolean>>({});
+  const [showFullContent, setShowFullContent] = useState<Record<number, boolean>>({});
   
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -489,12 +490,34 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
     );
   };
 
-  const renderDiff = (oldObj: any, newObj: any) => {
+  const renderDiff = (oldObj: any, newObj: any, recordId?: number) => {
     const oldStr = oldObj ? JSON.stringify(oldObj, null, 2) : '';
     const newStr = newObj ? JSON.stringify(newObj, null, 2) : '';
     const changes = Diff.diffLines(oldStr, newStr);
 
-    // Filter out context lines to show only changes
+    const isShowingFull = recordId !== undefined ? showFullContent[recordId] : false;
+
+    if (isShowingFull) {
+      return (
+        <div className="flex flex-col gap-2">
+          <div className="font-mono text-xs whitespace-pre overflow-x-auto bg-black p-4 rounded text-gray-300 border border-[#333]">
+            {changes.map((part, index) => {
+              if (part.added) return <div key={index} className="bg-green-900/40 text-green-400">+{part.value.replace(/\n$/, '')}</div>;
+              if (part.removed) return <div key={index} className="bg-red-900/40 text-red-400">-{part.value.replace(/\n$/, '')}</div>;
+              return <div key={index} className="opacity-50"> {part.value.replace(/\n$/, '')}</div>;
+            })}
+          </div>
+          <button 
+            onClick={() => recordId !== undefined && setShowFullContent(prev => ({ ...prev, [recordId]: false }))}
+            className="text-[10px] font-bold text-k3s-muted uppercase tracking-widest hover:text-white self-end flex items-center gap-1"
+          >
+            <ChevronUp className="w-3 h-3" /> Hide Full Content
+          </button>
+        </div>
+      );
+    }
+
+    // Filter out context lines to show only changes for compact view
     const diffLines = changes.flatMap((part) => {
       const lines = part.value.split('\n').filter(l => l.length > 0);
       return lines.map(line => ({
@@ -515,12 +538,20 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
     }
 
     return (
-      <div className="font-mono text-xs whitespace-pre overflow-x-auto bg-black p-4 rounded text-gray-300 border border-[#333]">
-        {onlyChanges.map((line, index) => {
-          if (line.added) return <div key={index} className="bg-green-900/40 text-green-400">+{line.content}</div>;
-          if (line.removed) return <div key={index} className="bg-red-900/40 text-red-400">-{line.content}</div>;
-          return null;
-        })}
+      <div className="flex flex-col gap-2">
+        <div className="font-mono text-xs whitespace-pre overflow-x-auto bg-black p-4 rounded text-gray-300 border border-[#333]">
+          {onlyChanges.map((line, index) => {
+            if (line.added) return <div key={index} className="bg-green-900/40 text-green-400">+{line.content}</div>;
+            if (line.removed) return <div key={index} className="bg-red-900/40 text-red-400">-{line.content}</div>;
+            return null;
+          })}
+        </div>
+        <button 
+          onClick={() => recordId !== undefined && setShowFullContent(prev => ({ ...prev, [recordId]: true }))}
+          className="text-[10px] font-bold text-k3s-primary uppercase tracking-widest hover:text-white self-end flex items-center gap-1"
+        >
+          <FileText className="w-3 h-3" /> Show Full Content
+        </button>
       </div>
     );
   };
@@ -579,12 +610,10 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                                 const changes = Diff.diffLines(oldStr, newStr);
                                 const added = changes.filter(p => p.added).length;
                                 const removed = changes.filter(p => p.removed).length;
-                                if (added === 0 && removed === 0) return null;
+                                const changedCount = added + removed;
+                                if (changedCount === 0) return null;
                                 return (
-                                  <>
-                                    <span className="text-[9px] font-bold text-green-500/80 bg-green-500/5 px-1 border border-green-500/20">+{added} lines</span>
-                                    <span className="text-[9px] font-bold text-red-500/80 bg-red-500/5 px-1 border border-red-500/20">-{removed} lines</span>
-                                  </>
+                                  <span className="text-[9px] font-bold text-k3s-primary/80 bg-k3s-primary/5 px-1 border border-k3s-primary/20">{changedCount} lines changed</span>
                                 );
                               })()}
                             </div>
@@ -621,7 +650,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab 
                           This is the currently deployed configuration
                         </div>
                       ) : (
-                        renderDiff(diffBaseRecord?.parameters, record.parameters)
+                        renderDiff(diffBaseRecord?.parameters, record.parameters, record.id)
                       )}
                     </div>
                   )}
