@@ -606,107 +606,116 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab,
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {history.map((record, idx) => {
-              // The "Active" record is technically the first non-draft record
-              const activeRecord = history.find(r => !r.isDraft) || history[0];
-              const diffBaseRecord = activeRecord;
-              const isExpanded = expandedDiffs[record.id];
-              const date = new Date(record.createdAt).toLocaleString();
-              
-              // We consider a record "Active" visually if it is the first non-draft record
-              const isActive = activeRecord && record.id === activeRecord.id;
+              {(() => {
+                // Determine the true active record from the ORIGINAL history
+                const activeRecord = history.find(r => !r.isDraft) || history[0];
+                
+                // Sort history for display: starred true first, then keep original order (createdAt desc)
+                const sortedHistory = [...history].sort((a, b) => {
+                  if (a.isStarred && !b.isStarred) return -1;
+                  if (!a.isStarred && b.isStarred) return 1;
+                  return 0; // both are same starred state, preserve original order
+                });
 
-              return (
-                <div key={record.id} className={`border ${record.isDraft ? 'border-k3s-secondary/50 border-dashed' : 'border-k3s-border'} bg-black/40 overflow-hidden`}>
-                  <div 
-                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#111] transition-colors"
-                    onClick={() => toggleExpand(record.id)}
-                  >
-                    <div className="flex items-center gap-4">
-                      <button 
-                        onClick={(e) => handleStarToggle(e, record)}
-                        className={`transition-colors flex-shrink-0 ${record.isStarred ? 'text-yellow-400' : 'text-k3s-muted hover:text-white'}`}
+                return sortedHistory.map((record) => {
+                  const diffBaseRecord = activeRecord;
+                  const isExpanded = expandedDiffs[record.id];
+                  const date = new Date(record.createdAt).toLocaleString();
+                  
+                  // We consider a record "Active" visually if it is the first non-draft record
+                  const isActive = activeRecord && record.id === activeRecord.id;
+
+                  return (
+                    <div key={record.id} className={`border ${record.isDraft ? 'border-k3s-secondary/50 border-dashed' : 'border-k3s-border'} bg-black/40 overflow-hidden`}>
+                      <div 
+                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#111] transition-colors"
+                        onClick={() => toggleExpand(record.id)}
                       >
-                        <Star className={`w-5 h-5 ${record.isStarred ? 'fill-current' : ''}`} />
-                      </button>
-                      <div>
-                        <div className="font-bold text-white text-sm flex items-center gap-2">
-                          {record.versionName || `Update - ${date}`}
-                          {record.isDraft && (
-                             <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest bg-blue-500/10 px-1.5 py-0.5 border border-blue-500/30 rounded">
-                               Draft
-                             </span>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-1 mt-1">
-                          <div className="flex items-center gap-1 text-k3s-muted text-[10px] uppercase tracking-wider">
-                            <Clock className="w-3 h-3" />
-                            {date}
-                          </div>
-                          {idx !== 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {(() => {
-                                const activeRecord = history[0];
-                                const oldStr = activeRecord ? JSON.stringify(activeRecord.parameters, null, 2) : '';
-                                const newStr = JSON.stringify(record.parameters, null, 2);
-                                const changes = Diff.diffLines(oldStr, newStr);
-                                const added = changes.filter(p => p.added).length;
-                                const removed = changes.filter(p => p.removed).length;
-                                const changedCount = added;
-                                if (changedCount === 0) return null;
-                                return (
-                                  <span className="text-[9px] font-bold text-k3s-primary/80 bg-k3s-primary/5 px-1 border border-k3s-primary/20">{changedCount} changes</span>
-                                );
-                              })()}
+                        <div className="flex items-center gap-4">
+                          <button 
+                            onClick={(e) => handleStarToggle(e, record)}
+                            className={`transition-colors flex-shrink-0 ${record.isStarred ? 'text-yellow-400' : 'text-k3s-muted hover:text-white'}`}
+                          >
+                            <Star className={`w-5 h-5 ${record.isStarred ? 'fill-current' : ''}`} />
+                          </button>
+                          <div>
+                            <div className="font-bold text-white text-sm flex items-center gap-2">
+                              {record.versionName || `Update - ${date}`}
+                              {record.isDraft && (
+                                 <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest bg-blue-500/10 px-1.5 py-0.5 border border-blue-500/30 rounded">
+                                   Draft
+                                 </span>
+                              )}
                             </div>
-                          )}
+                            <div className="flex flex-col gap-1 mt-1">
+                              <div className="flex items-center gap-1 text-k3s-muted text-[10px] uppercase tracking-wider">
+                                <Clock className="w-3 h-3" />
+                                {date}
+                              </div>
+                              {!isActive && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {(() => {
+                                    const oldStr = activeRecord ? JSON.stringify(activeRecord.parameters, null, 2) : '';
+                                    const newStr = JSON.stringify(record.parameters, null, 2);
+                                    const changes = Diff.diffLines(oldStr, newStr);
+                                    const added = changes.filter(p => p.added).length;
+                                    const removed = changes.filter(p => p.removed).length;
+                                    const changedCount = added + removed;
+                                    if (changedCount === 0) return null;
+                                    return (
+                                      <span className="text-[9px] font-bold text-k3s-primary/80 bg-k3s-primary/5 px-1 border border-k3s-primary/20">{changedCount} changes</span>
+                                    );
+                                  })()}
+                                </div>
+                              )}
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4">
-                      {isActive && (
-                        <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest bg-green-500/10 px-2 py-1 border border-green-500/30">
-                          Active
-                        </span>
-                      )}
-                      {!isActive && (
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); resumeEditing(record); }}
-                            className="text-[10px] font-bold text-k3s-muted uppercase tracking-widest hover:text-white px-2 py-1 border border-k3s-border hover:border-k3s-muted transition-colors"
-                          >
-                            Resume Edit
-                          </button>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); submitToDeploy(record); }}
-                            className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest bg-yellow-500/10 px-2 py-1 border border-yellow-500/30 hover:bg-yellow-500 hover:text-black transition-colors"
-                          >
-                            Deploy
-                          </button>
-                        </div>
-                      )}
-                      {isExpanded ? <ChevronUp className="w-5 h-5 text-k3s-muted" /> : <ChevronDown className="w-5 h-5 text-k3s-muted" />}
-                    </div>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="p-4 border-t border-[#333]">
-                      <div className="text-[10px] font-bold text-k3s-muted uppercase tracking-widest mb-3 flex items-center justify-between">
-                        <span>{isActive ? 'Active Configuration' : 'Changes compared to Active Configuration'}</span>
+                      <div className="flex items-center gap-4">
+                        {isActive && (
+                          <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest bg-green-500/10 px-2 py-1 border border-green-500/30">
+                            Active
+                          </span>
+                        )}
+                        {!isActive && (
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); resumeEditing(record); }}
+                              className="text-[10px] font-bold text-k3s-muted uppercase tracking-widest hover:text-white px-2 py-1 border border-k3s-border hover:border-k3s-muted transition-colors"
+                            >
+                              Resume Edit
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); submitToDeploy(record); }}
+                              className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest bg-yellow-500/10 px-2 py-1 border border-yellow-500/30 hover:bg-yellow-500 hover:text-black transition-colors"
+                            >
+                              Deploy
+                            </button>
+                          </div>
+                        )}
+                        {isExpanded ? <ChevronUp className="w-5 h-5 text-k3s-muted" /> : <ChevronDown className="w-5 h-5 text-k3s-muted" />}
                       </div>
-                      {isActive ? (
-                        <div className="text-center py-4 border border-dashed border-k3s-border bg-black/20 text-k3s-muted text-[10px] uppercase tracking-widest">
-                          This is the currently deployed configuration
-                        </div>
-                      ) : (
-                        renderDiff(diffBaseRecord?.parameters, record.parameters, record.id)
-                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+
+                    {isExpanded && (
+                      <div className="p-4 border-t border-[#333]">
+                        <div className="text-[10px] font-bold text-k3s-muted uppercase tracking-widest mb-3 flex items-center justify-between">
+                          <span>{isActive ? 'Active Configuration' : 'Changes compared to Active Configuration'}</span>
+                        </div>
+                        {isActive ? (
+                          <div className="text-center py-4 border border-dashed border-k3s-border bg-black/20 text-k3s-muted text-[10px] uppercase tracking-widest">
+                            This is the currently deployed configuration
+                          </div>
+                        ) : (
+                          renderDiff(diffBaseRecord?.parameters, record.parameters, record.id)
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+              })()}
             </div>
           )}
         </div>
