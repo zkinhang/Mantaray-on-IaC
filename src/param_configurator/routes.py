@@ -90,7 +90,7 @@ def save_parameters():
     parameters_payload = data.get('parameters', data) # Fallback if frontend sends raw config
 
     # Ensure format is correct when returning string
-    json_string = json.dumps(parameters_payload, indent=4, sort_keys=False)
+    json_string = json.dumps(parameters_payload, indent=4)
 
     # 1. Save to SQLite for Diff/History functionality
     new_param = RobotParameter(

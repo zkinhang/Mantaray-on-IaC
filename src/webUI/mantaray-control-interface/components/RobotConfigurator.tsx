@@ -516,14 +516,30 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab,
 
     const isShowingFull = recordId !== undefined ? showFullContent[recordId] : false;
 
+    if (!isShowingFull && oldObj === null) {
+      return (
+        <div className="flex flex-col gap-2">
+          <div className="text-center py-4 border border-dashed border-k3s-border bg-black/20 text-k3s-muted text-[10px] uppercase tracking-widest">
+            This is the currently deployed configuration
+          </div>
+          <button 
+            onClick={() => recordId !== undefined && setShowFullContent(prev => ({ ...prev, [recordId]: true }))}
+            className="text-[10px] font-bold text-k3s-primary uppercase tracking-widest hover:text-white self-end flex items-center gap-1"
+          >
+            <FileText className="w-3 h-3" /> Show Full Content
+          </button>
+        </div>
+      );
+    }
+
     if (isShowingFull) {
       return (
         <div className="flex flex-col gap-2">
           <div className="font-mono text-xs whitespace-pre overflow-x-auto bg-black p-4 rounded text-gray-300 border border-[#333]">
             {changes.map((part, index) => {
-              if (part.added) return <div key={index} className="bg-green-900/40 text-green-400">+{part.value.replace(/\n$/, '')}</div>;
-              if (part.removed) return <div key={index} className="bg-red-900/40 text-red-400">-{part.value.replace(/\n$/, '')}</div>;
-              return <div key={index} className="opacity-50"> {part.value.replace(/\n$/, '')}</div>;
+              if (part.added && oldObj !== null) return <div key={index} className="bg-green-900/40 text-green-400">+{part.value.replace(/\n$/, '')}</div>;
+              if (part.removed && oldObj !== null) return <div key={index} className="bg-red-900/40 text-red-400">-{part.value.replace(/\n$/, '')}</div>;
+              return <div key={index} className={oldObj === null ? "" : "opacity-50"}> {part.value.replace(/\n$/, '')}</div>;
             })}
           </div>
           <button 
@@ -550,8 +566,16 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab,
 
     if (onlyChanges.length === 0) {
       return (
-        <div className="text-center py-4 border border-dashed border-k3s-border bg-black/20 text-k3s-muted text-[10px] uppercase tracking-widest">
-          No differences found
+        <div className="flex flex-col gap-2">
+          <div className="text-center py-4 border border-dashed border-k3s-border bg-black/20 text-k3s-muted text-[10px] uppercase tracking-widest">
+            No differences found
+          </div>
+          <button 
+            onClick={() => recordId !== undefined && setShowFullContent(prev => ({ ...prev, [recordId]: true }))}
+            className="text-[10px] font-bold text-k3s-primary uppercase tracking-widest hover:text-white self-end flex items-center gap-1"
+          >
+            <FileText className="w-3 h-3" /> Show Full Content
+          </button>
         </div>
       );
     }
@@ -703,13 +727,7 @@ export const RobotConfigurator: React.FC<RobotConfiguratorProps> = ({ activeTab,
                         <div className="text-[10px] font-bold text-k3s-muted uppercase tracking-widest mb-3 flex items-center justify-between">
                           <span>{isActive ? 'Active Configuration' : 'Changes compared to Active Configuration'}</span>
                         </div>
-                        {isActive ? (
-                          <div className="text-center py-4 border border-dashed border-k3s-border bg-black/20 text-k3s-muted text-[10px] uppercase tracking-widest">
-                            This is the currently deployed configuration
-                          </div>
-                        ) : (
-                          renderDiff(diffBaseRecord?.parameters, record.parameters, record.id)
-                        )}
+                        {renderDiff(isActive ? null : diffBaseRecord?.parameters, record.parameters, record.id)}
                       </div>
                     )}
                   </div>
