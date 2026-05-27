@@ -8,26 +8,26 @@
                 "ki": -5.0,
                 "kd": 0.0,
                 "setpoint": 0.0,
-                "output_limits": [0.0, 0.0]
+                "output_limits": [-0.0, 0.0]
             },
             "yaw": {
                 "kp": 0.7,
                 "ki": 0.01,
                 "kd": 0.1,
                 "setpoint": 0.0,
-                "output_limits": [-50.0, 50.0]
-            },
-            "roll": {
-                "kp": 5.0,
-                "ki": 0.0,
-                "kd": 1.0,
-                "setpoint": 0.0,
                 "output_limits": [0.0, 0.0]
             },
+            "roll": {
+                "kp": -1.0,
+                "ki": -1.0,
+                "kd": -5.0,
+                "setpoint": 0.0,
+                "output_limits": [-0.0, 0.0]
+            },
             "depth": {
-                "kp": 0.37,
-                "ki": 0.17,
-                "kd": 3.1,
+                "kp": 0.1,
+                "ki": 0.02,
+                "kd": 0.015,
                 "setpoint": null,
                 "output_limits": [-50.0, 50.0]
             }
@@ -38,7 +38,7 @@
             "thrusterboard_config": {
                 "board_hw_id": "1A86:7523",
                 "port_name": "USB0",
-                "mapping": [7, 3, 6, -5, 2, -1, -4, -8]
+                "mapping": [-8, -4, 6, 2, -5, 3, -1, 7]
             },
             "thruster_direction_matrices": {
                 "HOLD":           [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
@@ -72,25 +72,25 @@
         "ros__parameters": {
             "gripper_config": {
                 "dpad_power": 0.65,
-                "a_pwm_step": 30,
-                "b_pwm_step": 85,
-                "c_pwm_step": 50,
+                "a_pwm_step": 60,
+                "b_pwm_step": 50,
+                "c_pwm_step": 30,
 
                 "a_pwm_min": 550,
                 "a_pwm_max": 2450,
                 "b_pwm_min": 550,
                 "b_pwm_max": 2450,
                 "c_pwm_min": 550,
-                "c_pwm_max": 2450,
+                "c_pwm_max": 1400,
 
                 "initial_gripper_a_values": [1400.0, 1400.0, 1400.0],
                 "initial_gripper_b_values": [1400.0, 1400.0, 1400.0],
 
                 "gripper_a_mapping": [0, 1, 2],
-                "gripper_b_mapping": [0, 1, 2],
+                "gripper_b_mapping": [2, 1, 0],
 
                 "gripper_a_continuous_mapping": [0, 1, 1],
-                "gripper_b_continuous_mapping": [0, 1, 1]
+                "gripper_b_continuous_mapping": [0, 0, 0]
             }
         }
     }
