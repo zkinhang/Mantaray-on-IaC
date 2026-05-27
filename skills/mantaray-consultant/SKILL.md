@@ -37,7 +37,7 @@ The application is modularized within `src/`:
 
 ## Repository Layout
 
-To maintain meticulous order, the project is structured as follows:
+The project is structured as follows:
 
 ```text
 .
@@ -80,5 +80,6 @@ To maintain meticulous order, the project is structured as follows:
 - `scripts/get_params.sh`: Fetches current ConfigMap values for `robot_params`.
 
 ## Best Practices
+- **Fix Connection Issues**: Follow the network switch workflow to reset network configurations according to the definations in `ansible/inventory_infra.ini` and run `bash kube_permission.sh` to fix kubectl permissions.
 - **Network Interfaces**: Use `playbook-network-switch.yaml` when migrating between Wi-Fi and Ethernet.
 - **Node Specificity**: Always use `nodeSelector` in manifests to ensure containers land on the correct physical hardware.
