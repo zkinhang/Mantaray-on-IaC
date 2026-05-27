@@ -35,11 +35,6 @@ Overview of the custom and integrated ROS2 packages in the `src/` directory.
 - **Role**: Serial communication backbone.
 - **Functions**: A C++ library providing a standardized interface for RS-232 and TTL serial communication.
 
-### `http_streamer`
-- **Role**: Low-latency video streaming.
-- **Formats**: MJPEG.
-- **Protocols**: HTTP.
-
 ## Interface & Infrastructure
 
 ### `custom_interfaces`
