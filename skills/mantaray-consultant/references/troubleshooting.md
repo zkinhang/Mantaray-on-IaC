@@ -14,13 +14,6 @@ This guide covers common issues and resolutions in the Mantaray-on-IaC environme
   - Verify registry: `curl http://mantaray.local:5000/v2/_catalog`
   - Check Node connectivity: `ping mantaray.local` from the node having the issue.
 
-### Pods stuck in `Pending`
-- **Cause**: Node selector mismatch or insufficient resources.
-- **Fix**:
-  - Check node labels: `kubectl get nodes --show-labels`
-  - Ensure labels like `ros2-hardware=land-pc` or `ros2-hardware=rov-main` exist.
-  - Apply labels manually if missing: `kubectl label node <node-name> ros2-hardware=<type>`
-
 ## 2. Hardware and Connectivity
 
 ### Camera Stream Not Loading
@@ -32,6 +25,7 @@ This guide covers common issues and resolutions in the Mantaray-on-IaC environme
 ### Thruster Communication Failure
 - **Cause**: Serial permissions or wrong baud rate.
 - **Fix**:
+  - Just reboot the ROV or delete the corresponding pod to reset the serial connection.
   - Ensure `privileged: true` is set in the deployment.
   - Verify serial device is mapped correctly in `manta-ray-deployment.yaml.j2`.
 
@@ -47,5 +41,6 @@ This guide covers common issues and resolutions in the Mantaray-on-IaC environme
 ### SSH Connection Refused
 - **Cause**: SSH service not started or wrong IP in `inventory.ini`.
 - **Fix**:
-  - Verify IP: `hostname -I` on target.
+  - Try to clean your existing DNS mapping in /etc/hosts: `sudo nano /etc/hosts` and remove any old entries for `mantaray.local`, `rov.local`, or `rov-cam.local`. (DO NOT REMOVE OTHERS)
+  - Verify IP by pinging the node: `ping mantaray.local` `ping rov.local` `ping rov-cam.local`
   - Check SSH state: `sudo systemctl status ssh`

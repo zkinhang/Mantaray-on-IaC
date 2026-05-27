@@ -12,11 +12,11 @@ The cluster uses `nodeSelector` to ensure pods run on the correct hardware.
 | `rov`     | `rov-camera`            | Associate    | Camera (USB), ESP32 (Micro-ROS)|
 
 ## Device Volumes
-Host devices are mapped into containers via the `manta-ray-deployment.yaml.j2` template, influenced by variables in `ansible/vars/hardware-paths.yaml`.
+Host devices are mapped into containers via the `manta-ray-deployment.yaml.j2` template, defined by variables in `ansible/vars/hardware-paths.yaml`.
 
-### Typical Mappings:
-- **Video Devices**: `/dev/video0`, `/dev/video1` -> For streaming and vision processing.
-- **Serial Devices**: `/dev/ttyUSB0`, `/dev/ttyACM0` -> For thruster communication and IMU data.
+### Hardware Mappings (`ansible/vars/hardware-paths.yaml`):
+- **Video Devices**: `path_a_camera` and `path_b_camera` (typically `/dev/video1`) map webcams for streaming and vision processing.
+- **USB & Serial Devices**: `path_imu` (`/dev/imu`) for the IMU sensor and `path_microros_serial` (`/dev/ttyUSB0`) for Micro-ROS communication.
 
 ## Configuration (ConfigMaps)
 Hardware-specific parameters are stored in `ansible/config/robot_params.json` and injected via the `robot-params` ConfigMap.
