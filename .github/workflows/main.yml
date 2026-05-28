@@ -2,7 +2,7 @@ name: Build and Push Mantaray Images
 
 on:
   push:
-    branches: [ "feat/CICD_yuki" ]
+    branches: [ "master" ]
 
 jobs:
   # Detect which components have changed
