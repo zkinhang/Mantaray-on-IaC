@@ -1,4 +1,5 @@
 [![Build and Push Mantaray Images](https://github.com/zkinhang/Mantaray-on-IaC/actions/workflows/main.yml/badge.svg)](https://github.com/zkinhang/Mantaray-on-IaC/actions/workflows/main.yml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/zkinhang/Mantaray-on-IaC)
 
 # APP documentations
 
