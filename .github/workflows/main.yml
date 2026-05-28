@@ -1,28 +1,115 @@
-name: CI/CD Docker Build and Push to Docker Hub
+name: Build and Push Mantaray Images
 
 on:
   push:
     branches: [ "feat/CICD_yuki" ]
 
 jobs:
-  build-and-push:
+  # Detect which components have changed
+  detect-changes:
     runs-on: ubuntu-latest
-
+    outputs:
+      main_image: ${{ steps.filter.outputs.main_image }}
+      microros: ${{ steps.filter.outputs.microros }}
+      webui: ${{ steps.filter.outputs.webui }}
     steps:
-      - name: 1. Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Setup Docker Buildx for better caching and speed up future builds
-      - name: 2. Set up Docker Buildx
+      - name: Filter Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            common:
+              - 'docker/common/**'
+              - 'src/ros2/**'
+              - 'src/launch_file/**'
+              - 'src/webrtc_streamer/**'
+            microros:
+              - 'docker/microros/**'
+              - 'src/microRos/**'
+            webui:
+              - 'docker/webUI/**'
+              - 'src/webUI/**'
+
+  # Build Main ROS Image (Multi-Arch: amd64, arm64)
+  build-main-image:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.common == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 3. Log in to Docker Hub
+      - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 4. Build and push Docker image
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: docker buildx build --platform linux/amd64,linux/arm64 --file docker/common/Dockerfile --tag ${{ secrets.DOCKERHUB_USERNAME }}/manta-ray-ros:latest --push .
+      - name: Build and Push manta-ray-ros
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/common/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/manta-ray-ros:latest
+
+  # 3. Build MicroROS Image (Single-Arch: arm64)
+  build-microros-image:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.microros == 'true' }}
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push microros-with-esptool
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/microros/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/microros-with-esptool:latest
+
+  # 4. Build Web UI Image (Single-Arch: amd64)
+  build-webui-image:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.webui == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push mantaray-control-interface
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/webUI/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/mantaray-control-interface:latest
