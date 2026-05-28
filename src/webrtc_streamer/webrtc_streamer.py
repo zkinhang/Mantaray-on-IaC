@@ -18,7 +18,6 @@ from av import VideoFrame
 
 LOGGER = logging.getLogger("webrtc_streamer")
 
-
 def parse_device(device: str) -> int | str:
     try:
         return int(device)
