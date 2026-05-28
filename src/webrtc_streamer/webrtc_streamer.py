@@ -17,7 +17,7 @@ from av import VideoFrame
 
 
 LOGGER = logging.getLogger("webrtc_streamer")
-
+print("hihihihiCICD Pipeline test")
 
 def parse_device(device: str) -> int | str:
     try:
