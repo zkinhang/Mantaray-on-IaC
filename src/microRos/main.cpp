@@ -67,8 +67,6 @@ int servo_size = 3;
 int gripper_pins[3] = {15, 18, 4};  // Adjust these pins as needed
 int sec_gripper_pins[3] = {32, 33, 35};  // Adjust these pins as needed
 
-int test_mode =1;
-
 Servo gripper_servos[3];  // [open/close, up/down, rotation]
 Servo sec_gripper_servos[3];
 
