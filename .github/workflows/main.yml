@@ -25,4 +25,4 @@ jobs:
       - name: 4. Build and push Docker image
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: docker build --file Dockerfile --tag ${{ secrets.DOCKERHUB_USERNAME }}/rov:$(date +%s) --push .
+        run: docker buildx build --platform linux/amd64,linux/arm64 --file docker/common/Dockerfile --tag ${{ secrets.DOCKERHUB_USERNAME }}/manta-ray-ros:latest --push .
