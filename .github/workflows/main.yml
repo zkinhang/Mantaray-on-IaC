@@ -9,7 +9,7 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      main_image: ${{ steps.filter.outputs.main_image }}
+      common: ${{ steps.filter.outputs.common }}
       microros: ${{ steps.filter.outputs.microros }}
       webui: ${{ steps.filter.outputs.webui }}
     steps:
