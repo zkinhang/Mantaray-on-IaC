@@ -51,7 +51,7 @@ The system runs as a K3s (lightweight Kubernetes) cluster across 3 physical mach
 
 #### Hardware
 
-- 3 machines matching the node roles above (x86_64 land PC + 2× ARM64 RPi or similar)
+- 3 machines matching the node roles above (x86_64 land PC + 2× ARM64 RPi or similar) and Ubuntu 24.04 installed
 - Passwordless SSH access between the nodes (need setup public-private key pairs)
 
 #### Software (on the machine running Ansible)
