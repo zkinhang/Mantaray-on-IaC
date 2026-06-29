@@ -1,0 +1,1 @@
+ build → push → sync to local registry → update deployment-vars  

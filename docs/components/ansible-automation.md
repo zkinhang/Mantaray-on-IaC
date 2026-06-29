@@ -1,3 +1,5 @@
+playbooks, inventory, vars, parameter injection flow
+
 ## 1. Infrastructure Playbook: `playbook-infra-airgap.yaml`
 
 **What it does:** Provisions the entire K3s cluster from scratch in an air-gapped environment. Installs K3s server and agents, configures container runtimes, sets up the local Docker registry, and applies node labels.

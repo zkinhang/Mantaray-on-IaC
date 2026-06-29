@@ -2,8 +2,12 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/zkinhang/Mantaray-on-IaC)
 
 # Mantaray-on-IaC  
-  
-Infrastructure-as-Code for the **Mantaray ROV** — an underwater remotely operated vehicle. This repository manages the full software stack: ROS2 application source code, Docker containerization, Kubernetes orchestration, and Ansible automation to provision and deploy everything across an extendable 3-node cluster.  
+
+This project was developed for the team **[Manta Ray](https://www.polyu.edu.hk/engineeringentrepreneurshipclub/news-and-events/news/2026/mate-hk-regional-2026/)** in [MATE ROV](https://materovcompetition.org/) 2026.
+
+![live_demo](docs/assets/live_demo.gif)
+
+Infrastructure-as-Code for the **Mantaray ROV** — an underwater remotely operated vehicle. This repository manages the full software stack: ROS2 application source code, Docker containerization, Kubernetes orchestration, and Ansible automation to provision and deploy everything across an extendable 3-node cluster.
   
 > Full application documentation (ROS2 node details, hardware specs, system design): [Notion Page](https://mellow-cap-3e1.notion.site/ebd/28700ae3fb2281b3afd4f744baa0d396?v=28700ae3fb2281af9793000cdafe78d9)  
   
@@ -51,7 +55,7 @@ The system runs as a K3s (lightweight Kubernetes) cluster across 3 physical mach
 
 #### Hardware
 
-- 3 machines matching the node roles above (x86_64 land PC + 2× ARM64 RPi or similar) and Ubuntu 24.04 installed
+- 3 machines matching the node roles above (x86_64 land PC + 2× ARM64 RPi or similar)
 - Passwordless SSH access between the nodes (need setup public-private key pairs)
 
 #### Software (on the machine running Ansible)

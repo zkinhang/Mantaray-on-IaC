@@ -1,0 +1,1 @@
+ 1 computer + ESP32 with Ansible + K3s  

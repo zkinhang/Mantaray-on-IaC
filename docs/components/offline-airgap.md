@@ -1,0 +1,1 @@
+local registry, skopeo copy, when to use  

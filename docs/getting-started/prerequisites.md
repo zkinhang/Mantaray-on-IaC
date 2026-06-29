@@ -1,0 +1,1 @@
+hardware, software, SSH access requirements
