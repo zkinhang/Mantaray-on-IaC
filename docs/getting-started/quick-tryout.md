@@ -1,0 +1,1 @@
+Docker-only, no cluster needed  

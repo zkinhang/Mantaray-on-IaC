@@ -1,0 +1,1 @@
+deployment → package → node label → purpose table + Notion link  

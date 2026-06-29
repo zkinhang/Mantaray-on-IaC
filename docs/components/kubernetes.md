@@ -1,0 +1,1 @@
+ansible/k8s/: manifest structure, nodeSelector, hostNetwork, services, dashboard

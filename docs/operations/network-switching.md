@@ -1,0 +1,1 @@
+ETH ↔ WLAN, what to change in inventory + infra-vars  

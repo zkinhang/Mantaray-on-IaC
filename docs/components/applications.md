@@ -1,0 +1,1 @@
+src/: ROS2 packages, webUI, webrtc, microROS — purpose + node reference table  
