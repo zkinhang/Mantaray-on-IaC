@@ -9,7 +9,7 @@ This project was developed for the team **[Manta Ray](https://www.polyu.edu.hk/e
 
 Infrastructure-as-Code for the **Mantaray ROV** — an underwater remotely operated vehicle. This repository manages the full software stack: ROS2 application source code, Docker containerization, Kubernetes orchestration, and Ansible automation to provision and deploy everything across an extendable 3-node cluster.
   
-> Full application documentation (ROS2 node details, hardware specs, system design): [Notion Page](https://mellow-cap-3e1.notion.site/ebd/28700ae3fb2281b3afd4f744baa0d396?v=28700ae3fb2281af9793000cdafe78d9)  
+> Full application documentation (ROS2 node details, webUI, webRTC streaming, microROS): [Notion Page](https://mellow-cap-3e1.notion.site/ebd/28700ae3fb2281b3afd4f744baa0d396?v=28700ae3fb2281af9793000cdafe78d9)  
   
 --- 
 
