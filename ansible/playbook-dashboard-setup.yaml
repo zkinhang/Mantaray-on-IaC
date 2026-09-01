@@ -2,11 +2,21 @@
   hosts: localhost
   gather_facts: false
 
+  vars_files:
+    - vars/infra-vars.yaml
+
   vars:
     dashboard_manifests_dir: "k8s/cluster-services"
     token_save_path: "./dashboard-admin-token.txt"
     # We define a specific port
     dashboard_port: 30443
+    master_node_name: >-
+      {{ (default_node_labels
+          | dict2items
+          | selectattr('value', 'equalto', 'land-pc')
+          | map(attribute='key')
+          | first)
+         | regex_replace('\.local$', '') }}
 
   tasks:
 
@@ -89,7 +99,7 @@
 
     - name: Get Master IP
       shell: |
-        kubectl get node mantaray -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}'
+        kubectl get node {{ master_node_name }} -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}'
       register: master_ip_output
       changed_when: false
 
@@ -98,7 +108,7 @@
         msg:
           - "Dashboard setup is complete!"
           - "------------------------------------------------------------------"
-          - "1. Open this URL: https://{{ master_ip_output.stdout }}:{{ dashboard_port }}"
+          - "1. Open this URL: http://{{ master_ip_output.stdout }}:{{ dashboard_port }}"
           - "2. Copy the token from: {{ token_save_path }}"
           - "------------------------------------------------------------------"
           - "NOTE: If Chrome says 'Your connection is not private' and creates a barrier:"
