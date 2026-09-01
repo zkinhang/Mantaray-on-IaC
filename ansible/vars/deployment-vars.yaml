@@ -2,6 +2,12 @@ main_ros_image: "mantaray.local:5000/manta-ray-ros:0.98.3"
 microros_image: "mantaray.local:5000/microros-with-esptool:0.1"
 web_ui_image: "mantaray.local:5000/mantaray-control-interface:latest"
 
+# Kubernetes Dashboard images from the local registry (air-gapped setup).
+kubernetes_dashboard_image: "mantaray.local:5000/kubernetesui/dashboard:v2.7.0"
+dashboard_metrics_scraper_image: "mantaray.local:5000/kubernetesui/metrics-scraper:v1.0.8"
+# kubernetes_dashboard_image: "kubernetesui/dashboard:v2.7.0"
+# dashboard_metrics_scraper_image: "kubernetesui/metrics-scraper:v1.0.8"
+
 all_app_deployments:
   - controller-deployment
   # - ui-node-deployment

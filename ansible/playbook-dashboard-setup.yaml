@@ -4,6 +4,7 @@
 
   vars_files:
     - vars/infra-vars.yaml
+    - vars/deployment-vars.yaml
 
   vars:
     dashboard_manifests_dir: "k8s/cluster-services"
@@ -30,7 +31,7 @@
     - name: Apply all dashboard YAML definitions
       kubernetes.core.k8s:
         state: present
-        src: "{{ item }}"
+        definition: "{{ lookup('template', item) | from_yaml_all | list }}"
       loop: "{{ lookup('fileglob', dashboard_manifests_dir + '/*.yaml', wantlist=True) }}"
 
     - name: Patch dashboard service to use specific NodePort
