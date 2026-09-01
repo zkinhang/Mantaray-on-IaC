@@ -16,7 +16,8 @@
           | selectattr('value', 'equalto', 'land-pc')
           | map(attribute='key')
           | first)
-         | regex_replace('\.local$', '') }}
+         | regex_replace('\.local$', '')
+         | lower }}
 
   tasks:
 
@@ -46,7 +47,7 @@
                 targetPort: 8443
                 nodePort: "{{ dashboard_port }}"
 
-    - name: Pin Dashboard pods to Mantaray
+    - name: Pin Dashboard pods to Master Node
       kubernetes.core.k8s:
         state: patched
         kind: Deployment
@@ -57,7 +58,7 @@
             template:
               spec:
                 nodeSelector:
-                  kubernetes.io/hostname: mantaray
+                  kubernetes.io/hostname: "{{ master_node_name }}"
       loop:
         - kubernetes-dashboard
         - dashboard-metrics-scraper
