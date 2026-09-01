@@ -9,6 +9,13 @@
     dashboard_port: 30443
 
   tasks:
+
+    - name: Ensure kubernetes-dashboard namespace exists
+      kubernetes.core.k8s:
+        name: kubernetes-dashboard
+        kind: Namespace
+        state: present
+
     - name: Apply all dashboard YAML definitions
       kubernetes.core.k8s:
         state: present
