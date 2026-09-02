@@ -110,7 +110,7 @@
         msg:
           - "Dashboard setup is complete!"
           - "------------------------------------------------------------------"
-          - "1. Open this URL: http://{{ master_ip_output.stdout }}:{{ dashboard_port }}"
+          - "1. Open this URL: https://{{ master_ip_output.stdout }}:{{ dashboard_port }}"
           - "2. Copy the token from: {{ token_save_path }}"
           - "------------------------------------------------------------------"
           - "NOTE: If Chrome says 'Your connection is not private' and creates a barrier:"
