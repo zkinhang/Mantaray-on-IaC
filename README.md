@@ -68,24 +68,24 @@ The system runs as a K3s (lightweight Kubernetes) cluster across 3 physical mach
 
 ## Documentation
 
-| **Topic** | **Link** |
-| --- | --- |
-| First-time cluster setup | [**docs/getting-started/full-cluster-setup.md**](docs/getting-started/full-cluster-setup.md) |
-| Prepare an Ubuntu workstation | [**docs/getting-started/ubuntu-workstation-setup.md**](docs/getting-started/ubuntu-workstation-setup.md) |
-| Connect to Ubuntu from Windows (RDP) | [**docs/getting-started/ubuntu-remote-desktop.md**](docs/getting-started/ubuntu-remote-desktop.md) |
-| Single-node development mode (1 PC + ESP32) | [**docs/getting-started/single-node-dev.md**](docs/getting-started/single-node-dev.md) |
-| Quick tryout without a cluster (Docker only) | [**docs/getting-started/quick-tryout.md**](docs/getting-started/quick-tryout.md) |
-| Managing applications (add/remove/modify) | [**docs/operations/managing-applications.md**](docs/operations/managing-applications.md) |
-| Switching between ETH and WLAN | [**docs/operations/network-switching.md**](docs/operations/network-switching.md) |
-| Updating images and configuration | [**docs/operations/updating-images.md**](docs/operations/updating-images.md) |
-| Applications (**`src/`**) | [**docs/components/applications.md**](https://deepwiki.com/search/docs/components/applications.md) |
-| Containerization (**`docker/`**) | [**docs/components/containerization.md**](docs/components/containerization.md) |
-| Kubernetes manifests (**`ansible/k8s/`**) | [**docs/components/kubernetes.md**](docs/components/kubernetes.md) |
-| Ansible automation (**`ansible/`**) | [**docs/components/ansible-automation.md**](docs/components/ansible-automation.md) |
-| CI/CD pipeline (**`.github/workflows/`**) | [**docs/components/cd-pipeline.md**](docs/components/cd-pipeline.md) |
-| Offline / air-gap mode | [**docs/components/offline-airgap.md**](docs/components/offline-airgap.md) |
-| Configuration file reference | [**docs/reference/configuration-files.md**](https://deepwiki.com/search/docs/reference/configuration-files.md) |
-| ROS2 node reference | [**docs/reference/ros2-node-reference.md**](docs/reference/ros2-node-reference.md) |
+| **Topic** | **Link** | **Status** |
+| --- | --- | --- |
+| Prerequisites | [**docs/getting-started/prerequisites.md**](docs/getting-started/prerequisites.md) | **Finished** |
+| First-time cluster setup | [**docs/getting-started/full-cluster-setup.md**](docs/getting-started/full-cluster-setup.md) | **Finished** |
+| Prepare an Ubuntu workstation | [**docs/getting-started/ubuntu-workstation-setup.md**](docs/getting-started/ubuntu-workstation-setup.md) | **Finished** |
+| Connect to Ubuntu from Windows (RDP) | [**docs/getting-started/ubuntu-remote-desktop.md**](docs/getting-started/ubuntu-remote-desktop.md) | **Finished** |
+| Switching between ETH and WLAN | [**docs/operations/network-switching.md**](docs/operations/network-switching.md) | in-progress |
+| Quick tryout without a cluster (Docker only mode) | [**docs/getting-started/quick-tryout.md**](docs/getting-started/quick-tryout.md) | pending |
+| Managing applications (add/remove/modify) | [**docs/operations/managing-applications.md**](docs/operations/managing-applications.md) | pending |
+| Updating images and configuration | [**docs/operations/updating-images.md**](docs/operations/updating-images.md) | pending |
+| Applications (**`src/`**) | [**docs/components/applications.md**](docs/components/applications.md) | pending |
+| Containerization (**`docker/`**) | [**docs/components/containerization.md**](docs/components/containerization.md) | pending |
+| Kubernetes manifests (**`ansible/k8s/`**) | [**docs/components/kubernetes.md**](docs/components/kubernetes.md) | pending |
+| Ansible automation (**`ansible/`**) | [**docs/components/ansible-automation.md**](docs/components/ansible-automation.md) | in-progress |
+| CI/CD pipeline (**`.github/workflows/`**) | [**docs/components/cd-pipeline.md**](docs/components/cd-pipeline.md) | pending |
+| Offline / air-gap mode | [**docs/components/offline-airgap.md**](docs/components/offline-airgap.md) | pending |
+| Configuration file reference | [**docs/reference/configuration-files.md**](docs/reference/configuration-files.md) | pending |
+| ROS2 node reference | [**docs/reference/ros2-node-reference.md**](docs/reference/ros2-node-reference.md) | pending |
 
 ---
 
