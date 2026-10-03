@@ -84,7 +84,7 @@
     - name: Clean up old node registrations from Master
       shell: |
         if command -v kubectl >/dev/null 2>&1; then
-          kubectl delete node {{ inventory_hostname }} --ignore-not-found=true
+          kubectl delete node {{ inventory_hostname | regex_replace('\.local$', '') | lower }} --ignore-not-found=true
         fi
       delegate_to: "{{ k3s_master_node }}"
       when:
@@ -488,6 +488,7 @@
           write-kubeconfig-mode: "0644"
           node-ip: "{{ hostvars[inventory_hostname]['ansible_k3s_server_ip']
                        | default(ansible_default_ipv4.address) }}"
+          node-name: "{{ inventory_hostname | regex_replace('\.local$', '') | lower }}"
           flannel-iface: "{{ ansible_default_ipv4.interface }}"
       when: inventory_hostname in groups['k3s_server']
       notify: Restart K3s
@@ -501,6 +502,7 @@
         block: |
           node-ip: "{{ hostvars[inventory_hostname]['ansible_k3s_agent_ip']
                        | default(ansible_default_ipv4.address) }}"
+          node-name: "{{ inventory_hostname | regex_replace('\.local$', '') | lower }}"
           flannel-iface: "{{ ansible_default_ipv4.interface }}"
       when: inventory_hostname in groups['k3s_agents']
       notify: Restart K3s
@@ -592,7 +594,7 @@
           - "{{ kubeconfig_path }}"
           - label
           - node
-          - "{{ item.metadata.name }}"
+          - "{{ item.metadata.name | lower }}"
           - "ros2-hardware={{ node_label_map[internal_ip] }}"
           - "ros2-node-ip={{ internal_ip }}"
           - --overwrite
