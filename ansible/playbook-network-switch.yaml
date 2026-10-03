@@ -12,7 +12,7 @@
       set_fact:
         target_ip: "{{ ansible_k3s_server_ip | default(ansible_k3s_agent_ip) }}"
         target_iface: "{{ node_interface_map[inventory_hostname][connection_mode] }}"
-        k8s_node_name: "{{ inventory_hostname | regex_replace('\.local$', '') | lower }}"
+        k8s_node_name: "{{ inventory_hostname | regex_replace('\\.local$', '') | lower }}"
 
     - name: Set Connection Facts
       set_fact:
