@@ -12,6 +12,7 @@
       set_fact:
         target_ip: "{{ ansible_k3s_server_ip | default(ansible_k3s_agent_ip) }}"
         target_iface: "{{ node_interface_map[inventory_hostname][connection_mode] }}"
+        k8s_node_name: "{{ inventory_hostname | regex_replace('\.local$', '') | lower }}"
 
     - name: Set Connection Facts
       set_fact:
@@ -90,6 +91,7 @@
         marker: "# {mark} ANSIBLE MANAGED K3S NETWORKING"
         block: |
           node-ip: "{{ target_ip }}"
+          node-name: "{{ k8s_node_name }}"
           flannel-iface: "{{ target_iface }}"
           bind-address: "{{ target_ip }}"
           advertise-address: "{{ target_ip }}"
@@ -217,6 +219,7 @@
         marker: "# {mark} ANSIBLE MANAGED K3S NETWORKING"
         block: |
           node-ip: "{{ target_ip }}"
+          node-name: "{{ k8s_node_name }}"
           flannel-iface: "{{ target_iface }}"
           server: "https://{{ hostvars[master_host]['ansible_k3s_server_ip'] }}:6443" 
           token: "{{ real_token }}"
@@ -258,7 +261,7 @@
 
     - name: Apply Hardware Labels
       command: >
-        kubectl label node {{ item | regex_replace('\.local$', '') }} 
+        kubectl label node {{ item | regex_replace('\.local$', '') | lower }} 
         ros2-hardware={{ default_node_labels[item] }} 
         --overwrite
       loop: "{{ groups['all_nodes'] }}"
@@ -266,7 +269,7 @@
 
     - name: Annotate nodes with current IP
       command: >
-        kubectl annotate node {{ item | regex_replace('\.local$', '') }} 
+        kubectl annotate node {{ item | regex_replace('\.local$', '') | lower }} 
         ros2-node-ip={{ hostvars[item]['ansible_k3s_server_ip'] | default(hostvars[item]['ansible_k3s_agent_ip']) }} 
         --overwrite
       loop: "{{ groups['all_nodes'] }}"
