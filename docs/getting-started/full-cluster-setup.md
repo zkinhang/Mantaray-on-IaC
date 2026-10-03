@@ -40,15 +40,30 @@ Then edit `ansible/vars/infra-vars.yaml`:
 - Confirm the entries in `default_node_labels` match the enabled inventory hostnames.
 - Confirm `node_interface_map` maps each hostname and connection mode to the correct Linux network-interface name.
 
-![Choosing the application image registry](../assets/ubuntu-workstation-setup/07.png)
-
 ![Finding the cloned repository path](../assets/ubuntu-workstation-setup/08.png)
 
 ![Configuring the K3s path and node interface map](../assets/ubuntu-workstation-setup/09.png)
 
 For a Wi-Fi or IP-address change, update both files together. See [Network switching](../operations/network-switching.md) for the operational workflow.
 
-## 3. Verify SSH and privilege escalation
+## 3. Select the application image source
+
+Edit `ansible/vars/deployment-vars.yaml` to tell Kubernetes where to pull the application images. The `main_ros_image`, `microros_image`, and `web_ui_image` variables are used by the application deployment manifest.
+
+- `mantaray.local:5000/...` refers to the project's local registry. Use it only after copying the required images into that registry.
+- `zkinhang/...` refers to the published Docker Hub images. This is the current workflow, so use these values when the nodes can reach the internet and Docker Hub:
+
+  ```yaml
+  main_ros_image: "zkinhang/manta-ray-ros:latest"
+  microros_image: "zkinhang/microros-with-esptool:latest"
+  web_ui_image: "zkinhang/mantaray-control-interface:latest"
+  ```
+
+Leave the Kubernetes Dashboard image entries unchanged unless you are also changing the dashboard's registry strategy.
+
+![Choosing the application image registry](../assets/ubuntu-workstation-setup/07.png)
+
+## 4. Verify SSH and privilege escalation
 
 Each enabled host must be reachable before installation:
 
@@ -64,7 +79,7 @@ ssh-keygen
 ssh-copy-id <username>@<node-ip>
 ```
 
-## 4. Install or reconfigure K3s
+## 5. Install or reconfigure K3s
 
 Run the infrastructure playbook from the repository root:
 
@@ -83,11 +98,9 @@ bash kube_permission.sh
 uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml
 ```
 
-![Fixing the kubeconfig permission issue](../assets/ubuntu-workstation-setup/15.png)
+## 6. Deploy the applications
 
-## 5. Deploy the applications
-
-The default image references in `ansible/vars/deployment-vars.yaml` use the local registry at `mantaray.local:5000`. Ensure that registry is populated before deployment, or deliberately update the image references to a registry that each node can reach.
+Confirm that the image source selected in the previous step is reachable from every node before deployment.
 
 Deploy the application manifests:
 
@@ -95,7 +108,9 @@ Deploy the application manifests:
 uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
 ```
 
-## 6. Set up the Kubernetes Dashboard
+Note: The command without `-e "force_restart=true"` is intentionally deisgned for updating the mapping/pid values in a quick way instead of restarting all the applications.
+
+## 7. Set up the Kubernetes Dashboard
 
 ```bash
 uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
@@ -103,19 +118,25 @@ uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setu
 
 ![Running the dashboard setup playbook](../assets/ubuntu-workstation-setup/17.png)
 
-The playbook prints the dashboard URL and writes the login token to `dashboard-admin-token.txt` in the directory where you run the command. The browser may warn about the dashboard's self-signed certificate; verify you are using the expected cluster address before proceeding.
+The playbook prints the dashboard URL and writes the login token to `dashboard-admin-token.txt` in the directory where you run the command. The browser may warn about the dashboard's self-signed certificate; can simply proceed to access the page.
 
 ![Dashboard certificate warning](../assets/ubuntu-workstation-setup/18.png)
 
+And you may save the token in browser. Note that everytime running this dashboard setup playbook will refresh the toekn as well.
+
 ![Dashboard login token](../assets/ubuntu-workstation-setup/19.png)
 
-## 7. Verify the deployment
+## 8. Verify the deployment
 
 ```bash
 kubectl get nodes
 kubectl get pods -A
 ```
 
-![Verifying the cluster nodes](../assets/ubuntu-workstation-setup/16.png)
+![Fixing the kubeconfig permission issue](../assets/ubuntu-workstation-setup/15.png)
 
 All enabled inventory nodes should appear as `Ready`. For the three-node deployment, check that the server and both agents have the expected IP addresses and hostnames.
+
+Note: The variables configured in `ansible/inventory_infra.ini` and `ansible/vars/infra-vars.yaml` must agree, including connection_mode, ip addresses, hostnames, network-interface names.
+
+![Verifying the cluster nodes](../assets/ubuntu-workstation-setup/16.png)
