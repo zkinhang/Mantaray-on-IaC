@@ -1,6 +1,4 @@
-ETH ↔ WLAN, what to change in inventory + infra-vars  
-
-## 2. Network Switch Playbook: `playbook-network-switch.yaml`
+## 1. Run Network Switch Playbook: `playbook-network-switch.yaml`
 
 **What it does:** Reconfigures the cluster when network interfaces or IP addresses change. Updates node-ip settings, flannel interface bindings, and ensures all nodes can communicate on the new network.
 
@@ -8,6 +6,7 @@ ETH ↔ WLAN, what to change in inventory + infra-vars
 - Changing the network interface (e.g., `eth0` → `wlan0`)
 - Changing node IP addresses
 - Switching between networks
+- **Encountered into any network connection issue, run this playbook to reconfigure it.**
 
 ### Variables
 
@@ -15,9 +14,12 @@ Update in `ansible/inventory_infra.ini`:
 
 | Variable | Description |
 |----------|-------------|
+| `connection_mode` | Network interface to use, "wlan" or "eth" |
 | `ansible_k3s_server_ip` | New IP address for the K3s server |
 | `ansible_k3s_agent_ip` | New IP addresses for agent nodes |
-| `ansible_default_ipv4.interface` | Network interface to use |
+| `ansible_host` | New IP addresses for server/agents, follow the exact the same in the line |
+
+Note: To obtain the ip addresses, you can use “ip addr show" or simply check it from router page, and recommended to assign static ip address for all the nodes.
 
 ### How to Run
 
@@ -33,7 +35,7 @@ After running this playbook, you **must** fix kubectl permissions:
 bash kube_permission.sh
 ```
 
-## 4. Dashboard Playbook: `playbook-dashboard-setup.yaml`
+## 2. Run Dashboard Playbook: `playbook-dashboard-setup.yaml`
 
 **What it does:** Installs the Kubernetes Dashboard, creates an admin user with a permanent token, and exposes the dashboard on the local network.
 
@@ -51,6 +53,8 @@ uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setu
 The playbook will output:
 - Dashboard URL
 - Path to the admin token file (`dashboard-admin-token.txt`)
+
+Please refer back to [Set up the Kubernetes Dashboard](../getting-started/full-cluster-setup.md#7-set-up-the-kubernetes-dashboard)
 
 ---
 ## Typical Testing Workflow
@@ -80,7 +84,3 @@ The playbook will output:
    ```bash
    uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
    ```
----
-
-- Add the two things that must change together: connection_mode + IPs in inventory_infra.ini, and interface names in ansible/vars/infra-vars.yaml
-

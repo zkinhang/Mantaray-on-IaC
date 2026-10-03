@@ -552,10 +552,7 @@
   gather_facts: true
   vars:
     kubeconfig_path: "{{ ansible_user_dir }}/.kube/config"
-    default_labels:
-      mantaray.local: land-pc
-      rov-cam.local: rov-main
-      rov.local: rov-camera
+    default_labels: "{{ hostvars['localhost']['default_labels'] }}"
   tasks:
     - name: Build node label map from inventory
       set_fact:
@@ -572,23 +569,31 @@
       when: node_ip | length > 0 and node_label | length > 0
 
     - name: Collect Kubernetes node information
-      kubernetes.core.k8s_info:
-        kubeconfig: "{{ kubeconfig_path }}"
-        kind: Node
-      register: cluster_nodes
+      command:
+        argv:
+          - kubectl
+          - --kubeconfig
+          - "{{ kubeconfig_path }}"
+          - get
+          - nodes
+          - -o
+          - json
+      register: cluster_nodes_output
+      changed_when: false
 
     - name: Apply ros2-hardware labels based on IP
       vars:
         internal_ip: "{{ (item.status.addresses | selectattr('type', 'equalto', 'InternalIP') | map(attribute='address') | list | first) | default('') }}"
       when: internal_ip | length > 0 and internal_ip in node_label_map
-      kubernetes.core.k8s:
-        kubeconfig: "{{ kubeconfig_path }}"
-        state: patched
-        kind: Node
-        name: "{{ item.metadata.name }}"
-        resource_definition:
-          metadata:
-            labels:
-              ros2-hardware: "{{ node_label_map[internal_ip] }}"
-              ros2-node-ip: "{{ internal_ip }}"
-      loop: "{{ cluster_nodes.resources }}"
+      command:
+        argv:
+          - kubectl
+          - --kubeconfig
+          - "{{ kubeconfig_path }}"
+          - label
+          - node
+          - "{{ item.metadata.name }}"
+          - "ros2-hardware={{ node_label_map[internal_ip] }}"
+          - "ros2-node-ip={{ internal_ip }}"
+          - --overwrite
+      loop: "{{ (cluster_nodes_output.stdout | from_json).items }}"
