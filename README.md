@@ -71,6 +71,8 @@ The system runs as a K3s (lightweight Kubernetes) cluster across 3 physical mach
 | **Topic** | **Link** |
 | --- | --- |
 | First-time cluster setup | [**docs/getting-started/full-cluster-setup.md**](docs/getting-started/full-cluster-setup.md) |
+| Prepare an Ubuntu workstation | [**docs/getting-started/ubuntu-workstation-setup.md**](docs/getting-started/ubuntu-workstation-setup.md) |
+| Connect to Ubuntu from Windows (RDP) | [**docs/getting-started/ubuntu-remote-desktop.md**](docs/getting-started/ubuntu-remote-desktop.md) |
 | Single-node development mode (1 PC + ESP32) | [**docs/getting-started/single-node-dev.md**](docs/getting-started/single-node-dev.md) |
 | Quick tryout without a cluster (Docker only) | [**docs/getting-started/quick-tryout.md**](docs/getting-started/quick-tryout.md) |
 | Managing applications (add/remove/modify) | [**docs/operations/managing-applications.md**](docs/operations/managing-applications.md) |
