@@ -84,7 +84,7 @@ The system runs as a K3s (lightweight Kubernetes) cluster across 3 physical mach
 | Kubernetes manifests (**`ansible/k8s/`**) | [**docs/components/kubernetes.md**](docs/components/kubernetes.md) | pending |
 | Ansible automation (**`ansible/`**) | [**docs/components/ansible-automation.md**](docs/components/ansible-automation.md) | **Finished** |
 | CI/CD pipeline (**`.github/workflows/`**) | [**docs/components/cd-pipeline.md**](docs/components/cd-pipeline.md) | **Finished** |
-| Offline / air-gap mode | [**docs/components/offline-airgap.md**](docs/components/offline-airgap.md) | pending |
+| Offline / air-gap mode | [**docs/components/offline-airgap.md**](docs/components/offline-airgap.md) | **Finished** |
 | Configuration file reference | [**docs/reference/configuration-files.md**](docs/reference/configuration-files.md) | pending |
 | ROS2 node reference | [**docs/reference/ros2-node-reference.md**](docs/reference/ros2-node-reference.md) | pending |
 
