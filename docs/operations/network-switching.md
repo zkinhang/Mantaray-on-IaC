@@ -1,33 +1,43 @@
-## 1. Run Network Switch Playbook: `playbook-network-switch.yaml`
+# Network switching  
+  
+This guide reconfigures the cluster when network interfaces or IP addresses change — for example switching between Ethernet (`eth`) and Wi-Fi (`wlan`), moving nodes to a new subnet, or recovering from connectivity issues. It assumes the cluster was installed following [Full cluster setup](../getting-started/full-cluster-setup.md).  
+  
+> Warning: the values in `ansible/inventory_infra.ini` and `ansible/vars/infra-vars.yaml` must agree, including `connection_mode`, IP addresses, hostnames, and network-interface names. Update both files together.  
 
-**What it does:** Reconfigures the cluster when network interfaces or IP addresses change. Updates node-ip settings, flannel interface bindings, and ensures all nodes can communicate on the new network.
+## 1. Update the infrastructure inventory  
+  
+Edit `ansible/inventory_infra.ini`:  
+  
+- Set `connection_mode` to `eth` or `wlan`, depending on whether the nodes connect via Ethernet or Wi-Fi.  
+- Set `ansible_k3s_server_ip` to the server's new IP address.  
+- Set `ansible_k3s_agent_ip` to each agent's new IP address.  
+- Set `ansible_host` on each host line to the same new IP address.  
+
+![change network fact](../assets/network-switching/change-network-fact.png)
+
+Then edit `ansible/vars/infra-vars.yaml`:  
+  
+- Confirm `node_interface_map` maps each hostname and connection mode to the correct Linux network-interface name (e.g., `eth0`, `wlan0`).  
+
+![change infra vars](../assets/network-switching/change-infra-vars.png)
+
+Note: To obtain the IP addresses, use `ip addr show` on each node or check the router's client list. Assigning static IP addresses to all nodes is recommended.  
+  
+## 2. Run the network-switch playbook  
+  
+```bash  
+uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
 
 **When to run it:**
 - Changing the network interface (e.g., `eth0` → `wlan0`)
 - Changing node IP addresses
 - Switching between networks
 - **Encountered into any network connection issue, run this playbook to reconfigure it.**
-
-### Variables
-
-Update in `ansible/inventory_infra.ini`:
-
-| Variable | Description |
-|----------|-------------|
-| `connection_mode` | Network interface to use, "wlan" or "eth" |
-| `ansible_k3s_server_ip` | New IP address for the K3s server |
-| `ansible_k3s_agent_ip` | New IP addresses for agent nodes |
-| `ansible_host` | New IP addresses for server/agents, follow the exact the same in the line |
-
-Note: To obtain the ip addresses, you can use “ip addr show" or simply check it from router page, and recommended to assign static ip address for all the nodes.
-
-### How to Run
-
-```bash
-uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
 ```
 
-### Post-Network Switch: Fix Kubernetes Permissions
+The playbook updates node-ip settings and flannel interface bindings so all nodes can communicate on the new network.
+
+## 3. Fix kubectl permissions
 
 After running this playbook, you **must** fix kubectl permissions:
 
@@ -35,16 +45,7 @@ After running this playbook, you **must** fix kubectl permissions:
 bash kube_permission.sh
 ```
 
-## 2. Run Dashboard Playbook: `playbook-dashboard-setup.yaml`
-
-**What it does:** Installs the Kubernetes Dashboard, creates an admin user with a permanent token, and exposes the dashboard on the local network.
-
-**When to run it:**
-- After initial cluster setup
-- After network reconfiguration
-- After cluster reinstallation
-
-### How to Run
+## 4. Redeploy the applications
 
 ```bash
 uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
@@ -54,33 +55,15 @@ The playbook will output:
 - Dashboard URL
 - Path to the admin token file (`dashboard-admin-token.txt`)
 
-Please refer back to [Set up the Kubernetes Dashboard](../getting-started/full-cluster-setup.md#7-set-up-the-kubernetes-dashboard)
+Please refer back to [Set up the Kubernetes Dashboard](../getting-started/full-cluster-setup.md#7-set-up-the-kubernetes-dashboard) for details on the dashboard URL and login token.
 
----
-## Typical Testing Workflow
+## 6. Verify the cluster
 
-### Network Switch Test
+```bash
+kubectl get nodes  
+kubectl get pods -A
+```
 
-1. **Edit network settings** in `ansible/inventory_infra.ini`:
-   - Update IP addresses
-   - Update network interface names
+![Verifying the cluster nodes](../assets/ubuntu-workstation-setup/16.png)
 
-2. **Run network switch playbook:**
-   ```bash
-   uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
-   ```
-
-3. **Fix kubectl permissions:**
-   ```bash
-   bash kube_permission.sh
-   ```
-
-4. **Redeploy applications:**
-   ```bash
-   uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
-   ```
-
-5. **Redeploy dashboard:**
-   ```bash
-   uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
-   ```
+All enabled nodes should appear as Ready with their new IP addresses, and application pods should return to Running.
