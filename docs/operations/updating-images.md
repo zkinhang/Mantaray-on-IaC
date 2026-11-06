@@ -2,6 +2,23 @@
 
 This guide covers building new application images, publishing them, and rolling them out to the cluster. Three images exist: `manta-ray-ros` (amd64 + arm64), `microros-with-esptool` (arm64), and `mantaray-control-interface` (amd64), they are built from the Dockerfiles in `docker/`. See [Architecture](../architecture.md#layer-2--containerization-docker) for the image contents and [CI/CD pipeline](../components/cd-pipeline.md) for automated builds.
 
+## 0. Prerequisites  
+  
+**For building images manually:**  
+  
+- Docker with the `buildx` plugin (`docker buildx version` to check).  
+- For multi-arch builds (`manta-ray-ros` needs amd64 + arm64), one of:  
+  - **QEMU emulation** — without any extra setting, just use `buildx` command. Simplest option; arm64 builds under emulation are slow.  
+  - **A remote builder** — [archived-scripts/create_remote_builder.sh](../../archived-scripts/create_remote_builder.sh) shows how to attach a real arm64 machine (e.g., a Raspberry Pi over SSH) as a second buildx node. Faster for large arm64 builds, but requires the remote host to run Docker and be SSH-reachable.  
+- `docker login` to DockerHub if pushing to `<user>/...`.  
+- The local registry itself is provisioned by the infrastructure playbook — see [Offline / Air-Gap mode](../components/offline-airgap.md).
+  
+**For syncing to the local registry:**  
+  
+- `skopeo` installed (`sudo apt install skopeo` on Ubuntu).  
+- Network reachability to **both** DockerHub and `mantaray.local:5000` — in practice this means running in `wlan` mode or on the land PC, since `eth` mode is air-gapped.  
+- If pushing directly to the local registry with `docker push` (Option C below), the pushing machine needs `mantaray.local:5000` in its Docker `insecure-registries` (`/etc/docker/daemon.json`), since the registry is plain HTTP. `skopeo` does not need this — it uses `--dest-tls-verify=false` per comma
+
 ## 1. Build and push the images
 
 **Option A — CI (recommended).** Push to `master`. GitHub Actions rebuilds only the images whose source paths changed and pushes them to DockerHub as `:latest`.
