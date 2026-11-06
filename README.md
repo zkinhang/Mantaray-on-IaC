@@ -74,16 +74,17 @@ The system runs as a K3s (lightweight Kubernetes) cluster across 3 physical mach
 | First-time cluster setup | [**docs/getting-started/full-cluster-setup.md**](docs/getting-started/full-cluster-setup.md) | **Finished** |
 | Prepare an Ubuntu workstation | [**docs/getting-started/ubuntu-workstation-setup.md**](docs/getting-started/ubuntu-workstation-setup.md) | **Finished** |
 | Connect to Ubuntu from Windows (RDP) | [**docs/getting-started/ubuntu-remote-desktop.md**](docs/getting-started/ubuntu-remote-desktop.md) | **Finished** |
-| Switching between ETH and WLAN | [**docs/operations/network-switching.md**](docs/operations/network-switching.md) | in-progress |
+| Switching between ETH and WLAN | [**docs/operations/network-switching.md**](docs/operations/network-switching.md) | **Finished** |
 | Quick tryout without a cluster (Docker only mode) | [**docs/getting-started/quick-tryout.md**](docs/getting-started/quick-tryout.md) | pending |
-| Managing applications (add/remove/modify) | [**docs/operations/managing-applications.md**](docs/operations/managing-applications.md) | pending |
-| Updating images and configuration | [**docs/operations/updating-images.md**](docs/operations/updating-images.md) | pending |
+| Managing applications (add/remove/modify) | [**docs/operations/managing-applications.md**](docs/operations/managing-applications.md) | **Finished** |
+| Updating configuration guide | [**docs/operations/configuration-updates.md**](docs/operations/configuration-updates.md) | **Finished** |
+| Updating images guide | [**docs/operations/updating-images.md**](docs/operations/updating-images.md) | **Finished** |
 | Applications (**`src/`**) | [**docs/components/applications.md**](docs/components/applications.md) | pending |
 | Containerization (**`docker/`**) | [**docs/components/containerization.md**](docs/components/containerization.md) | pending |
-| Kubernetes manifests (**`ansible/k8s/`**) | [**docs/components/kubernetes.md**](docs/components/kubernetes.md) | pending |
-| Ansible automation (**`ansible/`**) | [**docs/components/ansible-automation.md**](docs/components/ansible-automation.md) | in-progress |
-| CI/CD pipeline (**`.github/workflows/`**) | [**docs/components/cd-pipeline.md**](docs/components/cd-pipeline.md) | pending |
-| Offline / air-gap mode | [**docs/components/offline-airgap.md**](docs/components/offline-airgap.md) | pending |
+| Kubernetes manifests (**`ansible/k8s/`**) | [**docs/components/kubernetes.md**](docs/components/kubernetes.md) | **Finished** |
+| Ansible automation (**`ansible/`**) | [**docs/components/ansible-automation.md**](docs/components/ansible-automation.md) | **Finished** |
+| CI/CD pipeline (**`.github/workflows/`**) | [**docs/components/cd-pipeline.md**](docs/components/cd-pipeline.md) | **Finished** |
+| Offline / air-gap mode | [**docs/components/offline-airgap.md**](docs/components/offline-airgap.md) | **Finished** |
 | Configuration file reference | [**docs/reference/configuration-files.md**](docs/reference/configuration-files.md) | pending |
 | ROS2 node reference | [**docs/reference/ros2-node-reference.md**](docs/reference/ros2-node-reference.md) | pending |
 

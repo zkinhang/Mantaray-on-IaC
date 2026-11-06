@@ -140,3 +140,13 @@ All enabled inventory nodes should appear as `Ready`. For the three-node deploym
 Note: The variables configured in `ansible/inventory_infra.ini` and `ansible/vars/infra-vars.yaml` must agree, including connection_mode, ip addresses, hostnames, network-interface names.
 
 ![Verifying the cluster nodes](../assets/ubuntu-workstation-setup/16.png)
+
+## 9. Access the applications  
+  
+Once all pods are `Running`, the cluster is reachable at (we assume the land pc hostname is `mantaray.local` here):  
+  
+- **Web control UI:** `http://mantaray.local:30080`  
+- **Camera streams:** `http://<rov-main-ip>:30001` and `http://<rov-camera-ip>:30002`  
+- **Kubernetes Dashboard:** `https://<master-ip>:30443` (token in `dashboard-admin-token.txt`)  
+  
+See [Kubernetes manifests — services and ports](../components/kubernetes.md#services-and-ports) for the full endpoint list.

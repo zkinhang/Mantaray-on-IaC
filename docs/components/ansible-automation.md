@@ -1,194 +1,86 @@
-playbooks, inventory, vars, parameter injection flow
+# Ansible automation
 
-## 1. Infrastructure Playbook: `playbook-infra-airgap.yaml`
+All cluster operations are driven by four Ansible playbooks in the `ansible/` directory. This page is a reference for what each playbook does, which inventory and variables it consumes, and how to invoke it. For step-by-step procedures, see the guides linked under each playbook.
 
-**What it does:** Provisions the entire K3s cluster from scratch in an air-gapped environment. Installs K3s server and agents, configures container runtimes, sets up the local Docker registry, and applies node labels.
+## Inventories and variable files
 
-**When to run it:**
-- Initial cluster setup
-- Adding new nodes to the cluster
-- Replacing failed hardware
-- Full cluster reinstallation
+The playbooks read from two inventories and two variable files:
 
-### Variables
+| File | Purpose |
+|------|---------|
+| `ansible/inventory_infra.ini` | Infrastructure inventory: node hostnames, `ansible_host`, `ansible_k3s_server_ip` / `ansible_k3s_agent_ip`, `connection_mode` (`eth` or `wlan`), `force_k3s_reinstall`. Used by the infrastructure and network-switch playbooks. |
+| `ansible/inventory.ini` | Application inventory used by the application and dashboard playbooks. |
+| `ansible/vars/infra-vars.yaml` | `k3s_setup_dir`, `default_node_labels`, and `node_interface_map` (hostname + connection mode → Linux interface name). |
+| `ansible/vars/deployment-vars.yaml` | Application image sources (`main_ros_image`, `microros_image`, `web_ui_image`). |
 
-Configure in `ansible/inventory_infra.ini`:
+> Warning: the values in `inventory_infra.ini` and `infra-vars.yaml` must agree. Update both files together.
 
-| Variable | Description |
-|----------|-------------|
-| `force_k3s_reinstall` | Set to `true` to force complete reinstallation |
-| `ansible_k3s_server_ip` | IP address for the K3s server node |
-| `ansible_k3s_agent_ip` | IP address for agent nodes |
+## 1. Infrastructure playbook: `playbook-infra-airgap.yaml`
 
-### How to Run
+Provisions the K3s cluster in an air-gapped environment: installs K3s server and agents from the bundled assets, configures node networking and DNS, sets up the local Docker registry, and applies node labels.
+
+Run it for initial cluster setup, adding nodes, replacing hardware, or a full reinstall (`force_k3s_reinstall=true`).
 
 ```bash
 uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml
 ```
 
-### Post-Installation: Fix Kubernetes Permissions
+See [Full cluster setup](../getting-started/full-cluster-setup.md) for the complete procedure.
 
-After running this playbook, you **must** fix kubectl permissions:
+## 2. Network-switch playbook: `playbook-network-switch.yaml`
 
-```bash
-bash kube_permission.sh
-```
-
----
-
-## 2. Network Switch Playbook: `playbook-network-switch.yaml`
-
-**What it does:** Reconfigures the cluster when network interfaces or IP addresses change. Updates node-ip settings, flannel interface bindings, and ensures all nodes can communicate on the new network.
-
-**When to run it:**
-- Changing the network interface (e.g., `eth0` → `wlan0`)
-- Changing node IP addresses
-- Switching between networks
-
-### Variables
-
-Update in `ansible/inventory_infra.ini`:
-
-| Variable | Description |
-|----------|-------------|
-| `ansible_k3s_server_ip` | New IP address for the K3s server |
-| `ansible_k3s_agent_ip` | New IP addresses for agent nodes |
-| `ansible_default_ipv4.interface` | Network interface to use |
-
-### How to Run
+Reconfigures the cluster when network interfaces or IP addresses change. Updates node-ip settings and flannel interface bindings so all nodes can communicate on the new network.
 
 ```bash
 uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
 ```
 
-### Post-Network Switch: Fix Kubernetes Permissions
+See [Network switching](../operations/network-switching.md) for the full procedure, including the required inventory and `node_interface_map` updates.
 
-After running this playbook, you **must** fix kubectl permissions:
+## 3. Application playbook: `playbook-app.yaml`
 
-```bash
-bash kube_permission.sh
-```
+Deploys and manages applications on the cluster: applies Kubernetes manifests and updates ConfigMaps from `config/robot_params.json`.
 
----
+Deploy or update applications:
 
-## 3. Application Playbook: `playbook-app.yaml`
-
-**What it does:** Deploys and manages applications on the cluster. Applies Kubernetes manifests, updates ConfigMaps from `robot_params.json`, and performs rolling updates when configurations change.
-
-**When to run it:**
-- Deploying new application versions
-- Updating robot parameters in `config/robot_params.json`
-- Forcing a full application restart
-
-### How to Run
-
-**Deploy or update applications:**
 ```bash
 uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
 ```
 
-**Force restart all applications:**
+Force a full restart of all applications:
+
 ```bash
 uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml -e "force_restart=true"
 ```
 
----
+Note: the command without `force_restart` is intended for quickly updating mapping/PID values without restarting the applications.
 
-## 4. Dashboard Playbook: `playbook-dashboard-setup.yaml`
+## 4. Dashboard playbook: `playbook-dashboard-setup.yaml`
 
-**What it does:** Installs the Kubernetes Dashboard, creates an admin user with a permanent token, and exposes the dashboard on the local network.
-
-**When to run it:**
-- After initial cluster setup
-- After network reconfiguration
-- After cluster reinstallation
-
-### How to Run
+Installs the Kubernetes Dashboard, creates an admin user, and writes a login token to `dashboard-admin-token.txt` in the directory where the command runs. Each run refreshes the token.
 
 ```bash
 uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
 ```
 
-The playbook will output:
-- Dashboard URL
-- Path to the admin token file (`dashboard-admin-token.txt`)
+See [Set up the Kubernetes Dashboard](../getting-started/full-cluster-setup.md#7-set-up-the-kubernetes-dashboard) for access details.
 
----
-## Typical Testing Workflow
+## kubectl permissions
 
-### Full Installation Test
-
-1. **Configure variables** in `ansible/inventory_infra.ini`:
-   - Set `force_k3s_reinstall=true`
-   - Set correct IP addresses and interfaces
-
-2. **Run infrastructure playbook:**
-   ```bash
-   uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-infra-airgap.yaml
-   ```
-
-3. **Fix kubectl permissions:**
-   ```bash
-   bash kube_permission.sh
-   ```
-
-4. **Deploy applications:**
-   ```bash
-   uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
-   ```
-
-5. **Setup dashboard:**
-   ```bash
-   uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
-   ```
-
-6. **Verify cluster:**
-   ```bash
-   kubectl get nodes
-   kubectl get pods -A
-   ```
-
-### Network Switch Test
-
-1. **Edit network settings** in `ansible/inventory_infra.ini`:
-   - Update IP addresses
-   - Update network interface names
-
-2. **Run network switch playbook:**
-   ```bash
-   uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
-   ```
-
-3. **Fix kubectl permissions:**
-   ```bash
-   bash kube_permission.sh
-   ```
-
-4. **Redeploy applications:**
-   ```bash
-   uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-app.yaml
-   ```
-
-5. **Redeploy dashboard:**
-   ```bash
-   uv run ansible-playbook -i ansible/inventory.ini ansible/playbook-dashboard-setup.yaml
-   ```
-
----
-
-## Important Notes
-
-### Kubernetes Permission Issue
-
-Currently, kubectl permissions are not automatically configured. **You must run the following after any cluster configuration:**
+kubectl permissions are not configured automatically. After running the infrastructure or network-switch playbook, fix the kubeconfig:
 
 ```bash
 bash kube_permission.sh
 ```
 
-This script copies the kubeconfig and sets correct ownership:
+The script copies the K3s kubeconfig and sets ownership:
+
 ```bash
 sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
 sudo chown "$USER":"$USER" ~/.kube/config
 ```
----
+
+## Related guides
+
+- [Full cluster setup](../getting-started/full-cluster-setup.md) — initial installation end to end
+- [Network switching](../operations/network-switching.md) — interface and IP changes
