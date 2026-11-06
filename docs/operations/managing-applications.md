@@ -6,7 +6,7 @@ This guide covers adding, modifying, and removing application deployments on the
 
 Two files control what runs:
 
-- `ansible/k8s/manta-ray-deployment.yaml.j2` — the manifest template. Every `Deployment` document in it is applied unconditionally; there is no enable/disable flag.
+- `ansible/k8s/manta-ray-deployment.yaml.j2` — the manifest template. Every `Deployment` document in it is applied unconditionally; there is no enable/disable flag. See [Kubernetes manifests](../components/kubernetes.md) for the file inventory and a field-by-field breakdown.  
 - `ansible/vars/deployment-vars.yaml` — `all_app_deployments` lists the deployments that `force_restart` will restart. It does **not** control what gets deployed.
 
 > Note: the playbook only applies resources (`state: present`) — it never deletes them. Removing a deployment is always a manual step (§4).
@@ -26,11 +26,7 @@ What you change determines which file to edit:
 
 ## 3. Add a new deployment
 
-1. Add a `Deployment` document to `ansible/k8s/manta-ray-deployment.yaml.j2`, following the existing conventions:
-   - `hostNetwork: true` + `hostIPC: true` for ROS2 nodes (required for DDS discovery)
-   - `nodeSelector` with a `ros2-hardware` label matching the target node (see [Architecture — node labels](../architecture.md)), to indicate this application will run on which node
-   - `privileged: true` and device volume mounts if it accesses hardware (paths from `ansible/vars/hardware-paths.yaml`)
-   - a `parameter-volume` mount if it reads `robot_params.json`
+1. Add a `Deployment` document to `ansible/k8s/manta-ray-deployment.yaml.j2`, following the conventions in [Anatomy of a Deployment](../components/kubernetes.md#anatomy-of-a-deployment): `hostNetwork` + `hostIPC` for ROS2 nodes, a `ros2-hardware` `nodeSelector`, `privileged` for hardware access, and a `parameter-volume` mount if it reads `robot_params.json`.
 2. Add the deployment name to `all_app_deployments` in `ansible/vars/deployment-vars.yaml` so `force_restart` covers it.
 
 ![add deployment](../assets/managing-applications/add-deployment-1.png)
@@ -77,3 +73,4 @@ kubectl rollout status deployment/<deployment-name>
 - [Configuration updates](configuration-updates.md) — `robot_params.json` and `hardware-paths.yaml` changes
 - [Updating images](updating-images.md) — image builds, registry sync, rollout
 - [Ansible automation](../components/ansible-automation.md) — playbook reference
+- [Kubernetes manifests](../components/kubernetes.md) — file inventory, Deployment anatomy, services and ports
