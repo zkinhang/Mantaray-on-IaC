@@ -76,7 +76,7 @@ The system runs as a K3s (lightweight Kubernetes) cluster across 3 physical mach
 | Connect to Ubuntu from Windows (RDP) | [**docs/getting-started/ubuntu-remote-desktop.md**](docs/getting-started/ubuntu-remote-desktop.md) | **Finished** |
 | Switching between ETH and WLAN | [**docs/operations/network-switching.md**](docs/operations/network-switching.md) | **Finished** |
 | Quick tryout without a cluster (Docker only mode) | [**docs/getting-started/quick-tryout.md**](docs/getting-started/quick-tryout.md) | pending |
-| Managing applications (add/remove/modify) | [**docs/operations/managing-applications.md**](docs/operations/managing-applications.md) | pending |
+| Managing applications (add/remove/modify) | [**docs/operations/managing-applications.md**](docs/operations/managing-applications.md) | **Finished** |
 | Updating configuration guide | [**docs/operations/configuration-updates.md**](docs/operations/configuration-updates.md) | **Finished** |
 | Updating images guide | [**docs/operations/updating-images.md**](docs/operations/updating-images.md) | **Finished** |
 | Applications (**`src/`**) | [**docs/components/applications.md**](docs/components/applications.md) | pending |
