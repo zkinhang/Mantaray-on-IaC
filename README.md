@@ -77,7 +77,8 @@ The system runs as a K3s (lightweight Kubernetes) cluster across 3 physical mach
 | Switching between ETH and WLAN | [**docs/operations/network-switching.md**](docs/operations/network-switching.md) | **Finished** |
 | Quick tryout without a cluster (Docker only mode) | [**docs/getting-started/quick-tryout.md**](docs/getting-started/quick-tryout.md) | pending |
 | Managing applications (add/remove/modify) | [**docs/operations/managing-applications.md**](docs/operations/managing-applications.md) | pending |
-| Updating images and configuration | [**docs/operations/updating-images.md**](docs/operations/updating-images.md) | pending |
+| Updating configuration guide | [**docs/operations/configuration-updates.md**](docs/operations/configuration-updates.md) | **Finished** |
+| Updating images guide | [**docs/operations/updating-images.md**](docs/operations/updating-images.md) | pending |
 | Applications (**`src/`**) | [**docs/components/applications.md**](docs/components/applications.md) | pending |
 | Containerization (**`docker/`**) | [**docs/components/containerization.md**](docs/components/containerization.md) | pending |
 | Kubernetes manifests (**`ansible/k8s/`**) | [**docs/components/kubernetes.md**](docs/components/kubernetes.md) | pending |
