@@ -2,7 +2,7 @@
   
 This guide reconfigures the cluster when network interfaces or IP addresses change — for example switching between Ethernet (`eth`) and Wi-Fi (`wlan`), moving nodes to a new subnet, or recovering from connectivity issues. It assumes the cluster was installed following [Full cluster setup](../getting-started/full-cluster-setup.md).  
   
-> Warning: the values in `ansible/inventory_infra.ini` and `ansible/vars/infra-vars.yaml` must agree, including `connection_mode`, IP addresses, hostnames, and network-interface names. Update both files together.  
+> Warning: the values of hostnames and network-interface names in `ansible/inventory_infra.ini` and `ansible/vars/infra-vars.yaml` must agree. Update both files together.
 
 ## 1. Update the infrastructure inventory  
   
