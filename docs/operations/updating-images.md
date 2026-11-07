@@ -17,7 +17,6 @@ This guide covers building new application images, publishing them, and rolling 
   
 - `skopeo` installed (`sudo apt install skopeo` on Ubuntu).  
 - Network reachability to **both** DockerHub and `mantaray.local:5000` — in practice this means running in `wlan` mode or on the land PC, since `eth` mode is air-gapped.  
-- If pushing directly to the local registry with `docker push` (Option C below), the pushing machine needs `mantaray.local:5000` in its Docker `insecure-registries` (`/etc/docker/daemon.json`), since the registry is plain HTTP. `skopeo` does not need this — it uses `--dest-tls-verify=false` per comma
 
 ## 1. Build and push the images
 
