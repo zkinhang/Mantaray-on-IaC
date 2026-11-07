@@ -64,6 +64,6 @@ kubectl get nodes
 kubectl get pods -A
 ```
 
-![Verifying the cluster nodes](../assets/ubuntu-workstation-setup/16.png)
+![Verifying the cluster nodes](../assets/ubuntu-workstation-setup/15.png)
 
 All enabled nodes should appear as Ready with their new IP addresses, and application pods should return to Running.
