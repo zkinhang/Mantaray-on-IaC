@@ -27,13 +27,13 @@ Note: To obtain the IP addresses, use `ip addr show` on each node or check the r
   
 ```bash  
 uv run ansible-playbook -i ansible/inventory_infra.ini ansible/playbook-network-switch.yaml
+```
 
 **When to run it:**
 - Changing the network interface (e.g., `eth0` → `wlan0`)
 - Changing node IP addresses
 - Switching between networks
 - **Encountered into any network connection issue, run this playbook to reconfigure it.**
-```
 
 The playbook updates node-ip settings and flannel interface bindings so all nodes can communicate on the new network.
 
